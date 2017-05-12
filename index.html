@@ -43,7 +43,6 @@ body {
 
 .cell {
 	display: table-cell;
-	overflow-y: scroll;
 }
 
 .teams {
@@ -111,7 +110,7 @@ body {
 	bottom: 0;
 	overflow-y: auto;
 	max-height: 35em;
-	padding-right: 1.1em;
+	padding-right: 1.2em;
 	overflow-x: hidden;
 }
 
@@ -190,7 +189,7 @@ function player_item_onclick(item, team_id) {
 }
 
 function player_drag(ev) {
-	 ev.dataTransfer.setData("text", ev.target.id);
+	 ev.dataTransfer.setData("text/plain", ev.currentTarget.id);
 }
 
 function player_allowDrop(ev) {
@@ -261,7 +260,7 @@ function player_drop(ev) {
 	
 	// dropped on empty slot
 	if (target_id == "") {
-		var parent_id = ev.currentTarget.parentElement.id;
+		var parent_id = ev.currentTarget.parentElement.parentElement.id;
 		if (parent_id == "lobby") {
 			target_team = lobby;
 			target_index = lobby.length;
@@ -338,7 +337,7 @@ function player_dblClick(ev) {
 
 	// detect selected team
 	var selected_team;
-	var parent_id = ev.currentTarget.parentElement.id;
+	var parent_id = ev.currentTarget.parentElement.parentElement.id;
 	if (parent_id == "lobby") {
 		selected_team = lobby;
 	} else if (parent_id == "team1") {
@@ -373,6 +372,10 @@ function player_dblClick(ev) {
 	new_team.push( selected_player );
 	selected_team.splice(selected_index, 1);
 	
+	// clear selection
+	selected_player_team1 = "";
+	selected_player_team2 = "";
+	
 	redraw_teams();
 }
 
@@ -382,11 +385,13 @@ function draw_player( player_struct, team_id ) {
 	
 	var team_list = document.getElementById(team_id);
 	
+	var new_player_item_row = document.createElement("div");
+	new_player_item_row.className = "row ";
+	
 	var new_player_item = document.createElement("div");
-	new_player_item.className = "row player-item";
+	new_player_item.className = "cell player-item";
 	new_player_item.id = player_struct.id;
 	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
-	
 	if( ! player_struct.empty) {
 		new_player_item.draggable = true;
 	}
@@ -394,6 +399,7 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.ondrop = function(event){player_drop(event);};
 	new_player_item.ondragover = function(event){player_allowDrop(event);};
 	new_player_item.ondblclick = function(event){player_dblClick(event);};
+	new_player_item_row.appendChild(new_player_item);
 	
 	var player_icon = document.createElement("div");
 	player_icon.className = "player-icon";
@@ -430,7 +436,7 @@ function draw_player( player_struct, team_id ) {
 	player_name.appendChild(text_node);	
 	new_player_item.appendChild(player_name);
 	
-	team_list.appendChild(new_player_item);
+	team_list.appendChild(new_player_item_row);
 }
 
 function redraw_teams() {
@@ -821,12 +827,12 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 			<br/>
 			<br/>
 			
-			<!--<input class="big-btn" type="button" onclick="fill_test_teams();" value="Test"/>-->
+			<input class="big-btn" type="button" onclick="fill_test_teams();" value="Test"/>
 			</div>
 		</div>
 		
 		<div class="cell" style="vertical-align: top; padding-top: 5em; min-width: 5em; text-align: center;">
-		<input type="button" title="Swap selected players" id="swap_btn" disabled="true" onclick="swap_players();" value="&larr;&#13;&#10;&rarr;&#13;&#10;"/>
+		<input type="button" title="Swap selected players" id="swap_btn" disabled="true" onclick="swap_players();" value="&larr;&rarr;"/>
 		</div>
 		
 		<div class="cell">
