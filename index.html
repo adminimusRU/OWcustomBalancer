@@ -142,6 +142,18 @@ body {
 	font-size: 8pt;
 }
 
+.tips {
+	background-color: lightgreen;
+	border-radius: 1em;
+	padding: 1em;
+	margin-left: 5em;
+	max-width: 20em;
+}
+
+li {
+	margin-bottom: 1em;
+}
+
 </style>
 
 <script language="JavaScript" type="text/javascript">
@@ -905,6 +917,38 @@ function cancel_player_edit() {
 	current_player_edit = "";
 }
 
+function export_lobby() {
+	var export_struct = {
+		format_version: 1,
+		players: lobby
+		};
+	var export_str = JSON.stringify(export_struct);
+	
+	alert(export_str);
+}
+
+function import_lobby() {
+	var import_str = prompt("Enter import string");
+
+	if (import_str !== null && import_str != "") {
+		try {
+			var import_struct = JSON.parse(import_str);
+			
+			for( var i=0; i<import_struct.players.length; i++) {
+				// check duplicates
+				if (find_player_by_id(import_struct.players[i].id) === undefined ) {
+					lobby.splice(lobby.length, 0, import_struct.players[i]);
+				}
+			}
+			
+			redraw_teams();
+		}
+		catch(err) {
+			alert("Incorrect import format");
+		}
+	}
+}
+
 </script>
 </head>
 <body >
@@ -933,6 +977,8 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 		<div class="cell">
 			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
+			<input title="Import lobby" type="button" class="team_btn" onclick="import_lobby();" value="Im"/>
+			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby();" value="Ex"/>
 			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
 			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_team(lobby, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
 			</div>
@@ -988,7 +1034,7 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 			</div>
 		</div>
 		
-		<div class="cell" style="vertical-align: top; padding-top: 5em; min-width: 5em; text-align: center;">
+		<div class="cell" style="vertical-align: top; padding-top: 10em; min-width: 5em; text-align: center;">
 		<input type="button" title="Swap selected players" id="swap_btn" disabled="true" onclick="swap_players();" value="&larr;&rarr;"/>
 		</div>
 		
@@ -1008,6 +1054,20 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 			
 			<div class="table team" id="team2">
 				<!-- team 2 players -->
+			</div>
+		</div>
+		
+		<div class="cell">
+			<div class="tips">
+				<span class="team-title">&#x2753; Info</span>
+				<br>
+				<ul>
+					<li>Add players by full BattleTag</li>
+					<li>Drag & drop players between teams</li>
+					<li>Right click on player name or SR to edit</li>
+					<li>Player list automatically saved in your browser's storage</li>
+					<li>Click 'Balance teams' to automatically swap players between teams for minimum team SR difference</li>
+				</ul> 
 			</div>
 		</div>
 	</div>
