@@ -102,6 +102,7 @@ body {
 
 .team_btn {
 	float: right;
+	font-size: 70%;
 }
 
 .lobby-container {
@@ -131,7 +132,15 @@ body {
 	vertical-align: middle;
 }
 
+.team-toolbar {
+	display: inline-block;
+	width: 100%;
+}
 
+.sr-edit {
+	padding: 0;
+	font-size: 8pt;
+}
 
 </style>
 
@@ -142,6 +151,7 @@ var team1 = [];
 var team2 = [];
 var lobby = [];
 var team_size = 6;
+var current_player_edit = "";
 
 // global variables for recursive team balancer
 var balance_team_combinations = [];
@@ -152,6 +162,10 @@ var best_sr_diff = 0;
 var best_sr_diff_index = 0;
 
 function player_item_onclick(item, team_id) {
+	if ( item.id != current_player_edit ) {
+		cancel_player_edit();
+	}
+
 	var prev_selected_id = "";
 	if (team_id == "team1") {
 		prev_selected_id = selected_player_team1;
@@ -271,34 +285,11 @@ function player_drop(ev) {
 			target_team = team2;
 			target_index = team2.length;
 		}
-		/*else {
-			if ( dragged_team == team1 ) {
-				target_team = team2;
-				target_index = team2.length;
-			} else {
-				target_team = team1;
-				target_index = team1.length;
-			}
-		}*/
 	}
 	
 	if ((target_team == lobby) && (dragged_team != lobby)) {
 		drag_action = "move"; 
 	}
-	
-	// swap players
-	/*if (dragged_team == team1) {
-		if (target_id == "") {
-			//team1.splice(dragged_index,1);
-			dragged_team.splice(dragged_index,1);
-		} else {
-			//team1[dragged_index] = target_player;
-			dragged_team[dragged_index] = target_player;
-		}
-	} else {*/
-	
-
-	//}
 	
 	if (drag_action == "move") {
 		// move dragged player to target team (lobby)
@@ -316,11 +307,6 @@ function player_drop(ev) {
 	}
 	
 	if (drag_action == "swap") {
-		/*if (target_team == team1) {
-			team1[target_index] = dragged_player;
-		} else {
-			team2[target_index] = dragged_player;
-		}*/
 		// replace target with dragged player
 		target_team[target_index] = dragged_player;
 	}
@@ -420,20 +406,55 @@ function draw_player( player_struct, team_id ) {
 	
 	var icon_sr = document.createElement("div");
 	icon_sr.className = "icon-sr";
+	icon_sr.oncontextmenu = function(event){player_sr_click(event);};
+	
+	var sr_display = document.createElement("span");
+	sr_display.id = "sr_display_"+player_struct.id;
 	var sr_text = player_struct.sr;
 	if( player_struct.empty ) {
 		sr_text = '\u00A0';
 	}
 	text_node = document.createTextNode( sr_text );
-	icon_sr.appendChild(text_node);
+	sr_display.appendChild(text_node);
+	sr_display.appendChild(text_node);
+	icon_sr.appendChild(sr_display);
+	
+	var sr_input = document.createElement("input");
+	sr_input.type = "text";
+	sr_input.className = "inline-edit sr-edit";
+	sr_input.style = "display:none";
+	sr_input.name = player_struct.id;
+	sr_input.id = "sr_edit_"+player_struct.id;
+	sr_input.value = player_struct.sr;
+	sr_input.size = 4;
+	sr_input.onchange = function(event){player_sr_change(event);};
+	icon_sr.appendChild(sr_input);
+	
+	
 	player_icon.appendChild(icon_sr);
 	
 	new_player_item.appendChild(player_icon);
 	
 	var player_name = document.createElement("div");
-	player_name.className = "player-name";	
+	player_name.className = "player-name";
+	player_name.oncontextmenu = function(event){player_name_click(event);};
+	
+	var name_display = document.createElement("span");
+	name_display.id = "name_display_"+player_struct.id;
 	text_node = document.createTextNode(player_struct.display_name);
-	player_name.appendChild(text_node);	
+	name_display.appendChild(text_node);
+	player_name.appendChild(name_display);
+	
+	var name_input = document.createElement("input");
+	name_input.type = "text";
+	name_input.className = "inline-edit";
+	name_input.style = "display:none";
+	name_input.name = player_struct.id;
+	name_input.id = "name_edit_"+player_struct.id;
+	name_input.value = player_struct.display_name;
+	name_input.onchange = function(event){player_name_change(event);};
+	player_name.appendChild(name_input);
+	
 	new_player_item.appendChild(player_name);
 	
 	team_list.appendChild(new_player_item_row);
@@ -470,6 +491,10 @@ function redraw_teams() {
 		
 	update_teams_sr();
 	
+	save_players_list();
+}
+
+function save_players_list() {
 	// store players to browser local storage
 	var all_players = lobby.concat(team1).concat(team2);
 	localStorage.setItem("saved_players", JSON.stringify(all_players));
@@ -609,7 +634,7 @@ function add_player() {
 				
 				redraw_teams();
 			} else {
-				alert("Can't get player stats ("+this.status+")");
+				alert("Can't get player stats ("+this.status+"), connection problem or incorrect BattleTag");
 			}
 		}
 		document.getElementById("add_btn").disabled = false;
@@ -621,9 +646,15 @@ function add_player() {
 	xhttp.send();
 }
 
-function sort_team( team ) {
+function sort_team( team, sort_field = 'sr' ) {
 	team.sort( function(player1, player2){
-			return player2.sr - player1.sr;
+			if( typeof player1[sort_field] === 'string') {
+				var val1 = player1[sort_field].toLowerCase();
+				var val2 = player2[sort_field].toLowerCase();
+				return ( val1<val2 ? -1 : (val1>val2?1:0) );
+			} else {
+				return player2[sort_field] - player1[sort_field];
+			}
 		} );
 }
 
@@ -758,6 +789,121 @@ function update_team_size( new_value ) {
 	localStorage.setItem("team_size", team_size);
 }
 
+function find_player_by_id(player_id) {
+	for( var i=0; i<team1.length; i++) {
+		if ( player_id == team1[i].id) {
+			return team1[i];
+		}
+	}
+	for( var i=0; i<team2.length; i++) {
+		if ( player_id == team2[i].id) {
+			return team2[i];
+		}
+	}
+	for( var i=0; i<lobby.length; i++) {
+		if ( player_id == lobby[i].id) {
+			return lobby[i];
+		}
+	}
+	return undefined;
+}
+
+function player_name_click(ev) {
+	cancel_player_edit();
+	if ( ev.button == 2) {
+		// edit player name
+		ev.preventDefault();
+		
+		cancel_player_edit();
+		
+		var player_id = ev.currentTarget.parentElement.id;
+		var input = document.getElementById("name_edit_"+player_id);
+		input.style.display = "inline";
+		
+		var display = document.getElementById("name_display_"+player_id);
+		display.style.display = "none";
+		
+		current_player_edit = player_id;
+		
+		return false;
+	}
+}
+
+function player_name_change(ev) {
+	var player_id = ev.currentTarget.parentElement.parentElement.id;
+	var input = document.getElementById("name_edit_"+player_id);
+	input.style.display = "none";
+	
+	var display = document.getElementById("name_display_"+player_id);
+	display.style.display = "inline";
+	display.innerHTML = input.value;
+	
+	var player_struct = find_player_by_id(player_id);
+	player_struct.display_name = input.value;
+	
+	save_players_list();
+}
+
+function player_sr_click(ev) {
+	if ( ev.button == 2) {
+		// edit player name
+		ev.preventDefault();
+		
+		cancel_player_edit();
+		
+		var player_id = ev.currentTarget.parentElement.parentElement.id;
+		
+		var input = document.getElementById("sr_edit_"+player_id);
+		input.style.display = "inline";
+		
+		var display = document.getElementById("sr_display_"+player_id);
+		display.style.display = "none";
+		
+		current_player_edit = player_id;
+		
+		// disable context menu
+		return false;
+	}
+}
+
+function player_sr_change(ev) {
+	var player_id = ev.currentTarget.parentElement.parentElement.parentElement.id;
+	var input = document.getElementById("sr_edit_"+player_id);
+	input.style.display = "none";
+	
+	var display = document.getElementById("sr_display_"+player_id);
+	display.style.display = "inline";
+	display.innerHTML = input.value;
+	
+	var player_struct = find_player_by_id(player_id);
+	player_struct.sr = Number(input.value);
+	
+	save_players_list();
+}
+
+function cancel_player_edit() {
+	if (current_player_edit == "") {
+		return;
+	}
+	var player_struct = find_player_by_id(current_player_edit);
+
+	var input = document.getElementById("sr_edit_"+current_player_edit);
+	input.value = player_struct.sr;
+	input.style.display = "none";
+	
+	var display = document.getElementById("sr_display_"+current_player_edit);
+	display.style.display = "inline";
+	
+	input = document.getElementById("name_edit_"+current_player_edit);
+	input.value = player_struct.display_name;
+	input.style.display = "none";
+	
+	var display = document.getElementById("name_display_"+current_player_edit);
+	display.style.display = "inline";
+	
+	current_player_edit = "";
+}
+
 </script>
 </head>
 <body >
@@ -784,12 +930,16 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 <div class="table teams">
 	<div class="row">
 		<div class="cell">
-			<span class="team-title">Lobby</span>
-			
+			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
-			<input title="Sort lobby" type="button" class="team_btn" onclick="sort_team(lobby);redraw_teams();" value="&uarr;&darr;"/>
+			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_team(lobby, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
+			</div>
+		
+			<div>
+			<span class="team-title">Lobby</span>
+			</div>
 			
-			<br/>
 			<span id="lobby_count">0</span> players<br/>
 			
 			<div class="lobby-container">
@@ -810,15 +960,21 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 		</div>
 	
 		<div class="cell">
-			<span class="team-title">Team 1</span>
+			<div class="team-toolbar">
 			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team1);redraw_teams();" value=" X "/>
-			<input title="Sort team" type="button" class="team_btn" onclick="sort_team(team1);redraw_teams();" value="&uarr;&darr;"/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team1, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
 			<input title="Move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1);redraw_teams();" value="&lt;&lt;"/>
+			</div>
 			
-			<br/>
+			<div>
+			<span class="team-title">Team 1</span>
+			</div>
+			
 			<span id="team1_sr">0</span> average SR<br/>
+			
 			<div class="table team" id="team1">
-
+				<!-- team 1 players -->
 			</div>
 			
 			<br/>
@@ -836,13 +992,21 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 		</div>
 		
 		<div class="cell">
-			<span class="team-title">Team 2</span>
+			<div class="team-toolbar">
 			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team2);redraw_teams();" value=" X "/>
-			<input title="Sort team" type="button" class="team_btn" onclick="sort_team(team2);redraw_teams();" value="&uarr;&darr;"/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team2, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
 			<input title="Move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2);redraw_teams();" value="&lt;&lt;"/>
-			<br/>
+			</div>
+			
+			<div>
+			<span class="team-title">Team 2</span>
+			</div>
+		
 			<span id="team2_sr">0</span> average SR<br/>
+			
 			<div class="table team" id="team2">
+				<!-- team 2 players -->
 			</div>
 		</div>
 	</div>
@@ -857,6 +1021,7 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 var saved_players_json = localStorage.getItem("saved_players");
 if ( saved_players_json != null ) {
 	lobby = JSON.parse(saved_players_json);
+	sort_team(lobby, 'display_name')
 }
 
 var team_size_str = localStorage.getItem("team_size");
