@@ -377,6 +377,7 @@ function draw_player( player_struct, team_id ) {
 	var new_player_item = document.createElement("div");
 	new_player_item.className = "cell player-item";
 	new_player_item.id = player_struct.id;
+	new_player_item.title = player_struct.id;
 	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
 	if( ! player_struct.empty) {
 		new_player_item.draggable = true;
