@@ -154,6 +154,12 @@ li {
 	margin-bottom: 1em;
 }
 
+.class-icon {
+	height: 1.0em;
+	float: right;
+	filter: opacity(50%);
+}
+
 </style>
 
 <script language="JavaScript" type="text/javascript">
@@ -163,7 +169,9 @@ var team1 = [];
 var team2 = [];
 var lobby = [];
 var team_size = 6;
+var region = "eu";
 var current_player_edit = "";
+var min_api_request_interval = 5000; //milliseconds
 
 // global variables for recursive team balancer
 var balance_team_combinations = [];
@@ -172,6 +180,39 @@ var active_players = [];
 var active_players_total_sr = 0;
 var best_sr_diff = 0;
 var best_sr_diff_index = 0;
+
+// hero list for calculating main classes
+var hero_classes = {
+	reaper:		"offence",
+	pharah:		"offence",
+	soldier76:	"offence",
+	genji:		"offence",
+	tracer:		"offence",
+	sombra:		"offence",
+	mccree:		"offence",
+	
+	torbjorn:	"defence",
+	hanzo:		"defence",
+	mei:		"defence",
+	bastion:	"defence",
+	widowmaker:	"defence",
+	junkrat:	"defence",
+	
+	mercy:		"support",
+	ana:		"support",
+	lucio:		"support",
+	zenyatta:	"support",
+	symmetra:	"support",
+	
+	dva:		"tank",
+	orisa:		"tank",
+	winston:	"tank",
+	zarya:		"tank",
+	roadhog:	"tank",
+	reinhardt:	"tank",
+};
+
+var players_for_update = [];
 
 function player_item_onclick(item, team_id) {
 	if ( item.id != current_player_edit ) {
@@ -470,6 +511,16 @@ function draw_player( player_struct, team_id ) {
 	
 	new_player_item.appendChild(player_name);
 	
+	if ( player_struct.top_classes !== undefined ) {
+		for(var i=0; i<player_struct.top_classes.length; i++) {
+			var class_icon = document.createElement("img");
+			class_icon.className = "class-icon";
+			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
+			class_icon.title = player_struct.top_classes[i];
+			new_player_item.appendChild(class_icon);
+		}
+	}
+	
 	team_list.appendChild(new_player_item_row);
 }
 
@@ -582,7 +633,7 @@ function get_rank_name( sr ) {
 	}
 }
 
-function add_player() {
+function add_player_click() {
 	var player_id = document.getElementById("new_player_id").value;
 	player_id = player_id.trim().replace("#", "-");
 	player_name = player_id.slice( 0, player_id.search("-") );
@@ -633,19 +684,24 @@ function add_player() {
 		if (this.readyState == 4 ) {
 			if ( this.status == 200) {
 				var stats_obj = JSON.parse(this.responseText);
-				var new_player = {
-					id: player_id,
-					display_name: player_name, 
-					sr: stats_obj.eu.stats.competitive.overall_stats.comprank,
-					level: stats_obj.eu.stats.competitive.overall_stats.prestige*100 + stats_obj.eu.stats.competitive.overall_stats.level,
-					current_sr: 1900,
-					max_sr: 2410
-				};
-				new_player_team.push(new_player);
-				
-				document.getElementById("new_player_id").value = "";
-				
-				redraw_teams();
+				if ( stats_obj[region] !== null ) {	
+					var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+					
+					var new_player = {
+						id: player_id,
+						display_name: player_name, 
+						sr: stats_obj[region].stats.competitive.overall_stats.comprank,
+						level: stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
+						top_classes: top_classes,
+					};
+					new_player_team.push(new_player);
+					
+					document.getElementById("new_player_id").value = "";
+					
+					redraw_teams();
+				} else {
+					alert("Player has no stats in region "+region.toUpperCase());
+				}
 			} else {
 				alert("Can't get player stats ("+this.status+"), connection problem or incorrect BattleTag");
 			}
@@ -653,7 +709,7 @@ function add_player() {
 		document.getElementById("add_btn").disabled = false;
 		document.getElementById("add_btn").innerHTML = "add player";
 	};
-	xhttp.open("GET", "https://owapi.net/api/v3/u/"+player_id+"/stats", true);
+	xhttp.open("GET", "https://owapi.net/api/v3/u/"+player_id+"/blob", true);
 	document.getElementById("add_btn").disabled = true;
 	document.getElementById("add_btn").innerHTML = "processing...";
 	xhttp.send();
@@ -802,6 +858,11 @@ function update_team_size( new_value ) {
 	localStorage.setItem("team_size", team_size);
 }
 
+function update_region( new_value ) {
+	region = new_value;
+	localStorage.setItem("region", region);
+}
+
 function find_player_by_id(player_id) {
 	for( var i=0; i<team1.length; i++) {
 		if ( player_id == team1[i].id) {
@@ -932,6 +993,7 @@ function import_lobby() {
 
 	if (import_str !== null && import_str != "") {
 		try {
+			// try to parse json
 			var import_struct = JSON.parse(import_str);
 			
 			for( var i=0; i<import_struct.players.length; i++) {
@@ -944,10 +1006,107 @@ function import_lobby() {
 			redraw_teams();
 		}
 		catch(err) {
+			// try to parse as plain battletag list
 			alert("Incorrect import format");
 		}
 	}
 }
+
+// returns top 2 hero classes
+function calculate_top_classes( hero_playtime ) {
+	var class_playtime = {
+		offence: 0,
+		defence: 0,
+		tank: 0,
+		support: 0
+		};
+	
+	var total_playtime = 0;
+	for (var hero_name in hero_playtime ) {
+		var hero_class = hero_classes[hero_name];
+		class_playtime[hero_class] += hero_playtime[hero_name];
+		total_playtime += hero_playtime[hero_name];
+	}
+	
+	var class_playtime_arr = Object.entries(class_playtime);
+	class_playtime_arr.sort( function(item1, item2){
+			return item2[1]-item1[1];
+		});
+	
+	var top_classes = [];
+	var top_class = class_playtime_arr.shift();
+	if( top_class !== undefined ) {
+		top_classes.push( top_class[0] );
+	}
+	top_class = class_playtime_arr.shift();
+	if( top_class !== undefined ) {
+		if( Number(top_class[1])/total_playtime >= 0.25 ) {
+			top_classes.push( top_class[0] );
+		}
+	}
+	
+	return top_classes;
+}
+
+function update_next_player_stats( ) {
+	if ( players_for_update.length > 0 ) {
+		var current_player = players_for_update[0];
+		var xhttp = new XMLHttpRequest();
+		
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 ) {
+				var player =  players_for_update.shift();
+				var cancel_update = false;
+				
+				if ( this.status == 200) {
+					var stats_obj = JSON.parse(this.responseText);
+					if ( stats_obj[region] !== null ) {
+						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+						
+						player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
+						player.top_classes = top_classes;
+					} else {
+						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
+							cancel_update = true;
+						}
+					}
+				}
+				
+				if( cancel_update) {
+					document.getElementById("update_stats_btn").disabled = false;
+					document.getElementById("update_stats_btn").value = "Update stats";
+					redraw_teams();
+				} else {
+					setTimeout( update_next_player_stats, min_api_request_interval );
+				}
+			}
+		};
+		
+		xhttp.open("GET", "https://owapi.net/api/v3/u/"+current_player.id+"/blob", true);
+		xhttp.send();
+	} else {
+		// all players updated
+		alert("All stats updated");
+		document.getElementById("update_stats_btn").disabled = false;
+		document.getElementById("update_stats_btn").value = "Update stats";
+		redraw_teams();
+	}
+}
+
+function update_all_stats() {
+	players_for_update.splice( 0, players_for_update.length );
+	players_for_update = lobby.concat(team1).concat(team2);
+	
+	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
+	alert("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.");
+
+	document.getElementById("update_stats_btn").disabled = true;
+	document.getElementById("update_stats_btn").value = "Updating stats...";
+	
+	update_next_player_stats();
+}
+
 
 </script>
 </head>
@@ -958,12 +1117,19 @@ function import_lobby() {
 <br/>
 
 
-Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size(this.value);"/> players <br/>
+Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size(this.value);"/> players. 
+Region 
+<select id="region" onchange="update_region(this.value);">
+	<option value="eu">EU</option>
+	<option value="us">US</option>
+	<option value="kr">KR</option>
+</select> 
+<br/>
 <br/>
 
 
-<input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value=""/> 
-<button onclick="add_player();" id="add_btn" >add player</button> to 
+<input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value="" onchange="add_player_click();"/> 
+<button onclick="add_player_click();" id="add_btn" >add player</button> to 
 <input class="team-selecor" type="radio" name="add_team_select" value="lobby" >lobby
 <input class="team-selecor" type="radio" name="add_team_select" value="team_1" >team 1 
 <input class="team-selecor" type="radio" name="add_team_select" value="team_2" >team 2 
@@ -1026,10 +1192,13 @@ Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=
 			
 			<br/>
 			<div >
-			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams"/><br/>
+			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams"/>
 			<br/>
 			<br/>
+			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="Update stats"/>
 			
+			<br/>
+			<br/>
 			<input class="big-btn" style="display:none" type="button" onclick="fill_test_teams();" value="Test"/>
 			</div>
 		</div>
@@ -1091,6 +1260,13 @@ if ( team_size_str != null ) {
 }
 
 document.getElementById("team_size").value = team_size;
+
+var region_str = localStorage.getItem("region");
+if ( region_str != null ) {
+	region = region_str;
+}
+
+document.getElementById("region").value = region;
 
 redraw_teams();
 
