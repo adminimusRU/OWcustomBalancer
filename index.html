@@ -111,7 +111,7 @@ body {
 	top: 0;
 	bottom: 0;
 	overflow-y: auto;
-	max-height: 35em;
+	max-height: 33em;
 	padding-right: 1.2em;
 	overflow-x: hidden;
 }
@@ -149,6 +149,7 @@ body {
 	padding: 1em;
 	margin-left: 5em;
 	max-width: 20em;
+	min-width: 15em;
 }
 
 li {
@@ -187,11 +188,23 @@ li {
 	background-color: white;
 	border: 1px solid black;
 	padding: 2em;
+	padding-top: 0.5em;
 	box-shadow: 3px 3px 7px gray;
 }
 
 textarea {
 	text-align: left;
+}
+
+.filter {
+	border: 1px solid;
+	margin-bottom: 5px;
+}
+
+.filter-active {
+	/*border-color: blue;*/
+	outline: none;
+	box-shadow: 0 0 10px #9ecaed;
 }
 
 </style>
@@ -475,11 +488,9 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.ondblclick = function(event){player_dblClick(event);};
 	new_player_item_row.appendChild(new_player_item);
 	
+	// rank icon and SR
 	var player_icon = document.createElement("div");
 	player_icon.className = "player-icon";
-	
-	/*text_node = document.createTextNode("\u00A0");
-	player_icon.appendChild(text_node);*/
 	
 	var icon_image = document.createElement("div");
 	icon_image.className = "icon-image";
@@ -491,9 +502,6 @@ function draw_player( player_struct, team_id ) {
 	img_node.title = rank_name;
 	icon_image.appendChild(img_node);
 	player_icon.appendChild(icon_image);
-	
-	/*text_node = document.createTextNode("\u00A0");
-	player_icon.appendChild(text_node);*/
 	
 	br_node = document.createElement("br");
 	player_icon.appendChild(br_node);
@@ -529,6 +537,11 @@ function draw_player( player_struct, team_id ) {
 	
 	new_player_item.appendChild(player_icon);
 	
+	// space after rank icon
+	text_node = document.createTextNode("\u00A0");
+	new_player_item.appendChild(text_node)
+	
+	// player name
 	var player_name = document.createElement("div");
 	player_name.className = "player-name";
 	player_name.oncontextmenu = function(event){player_name_click(event);};
@@ -551,6 +564,7 @@ function draw_player( player_struct, team_id ) {
 	
 	new_player_item.appendChild(player_name);
 	
+	// class icons
 	if ( player_struct.top_classes !== undefined ) {
 		//for(var i=player_struct.top_classes.length-1; i>=0; i--) {
 		for(var i=0; i<player_struct.top_classes.length; i++) {
@@ -1163,6 +1177,23 @@ function close_dialog() {
 	document.getElementById("popup_dlg").style.display = "none";
 }
 
+function lobby_filter_change() {
+	var filter_value = document.getElementById("lobby_filter").value.toLowerCase();
+	if (filter_value != "") {
+		document.getElementById("lobby_filter").classList.add("filter-active");
+	} else {
+		document.getElementById("lobby_filter").classList.remove("filter-active");
+	}
+	
+	for( var i=0; i<lobby.length; i++) {
+		if ( filter_value == "" || lobby[i].display_name.toLowerCase().includes( filter_value ) ) {
+			document.getElementById(lobby[i].id).parentElement.style.display = "table-row";
+		} else {
+			document.getElementById(lobby[i].id).parentElement.style.display = "none";
+		}
+	}
+}
+
 </script>
 </head>
 <body >
@@ -1209,6 +1240,8 @@ Region
 			</div>
 			
 			<span id="lobby_count">0</span> players<br/>
+			
+			<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="filter by nickname" value="" oninput="lobby_filter_change();"/> 
 			
 			<div class="lobby-container">
 				<div class="table team" id="lobby">
