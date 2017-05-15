@@ -59,15 +59,16 @@ body {
 }
 
 .player-item {
-	border: 1px solid white;
+	/* -- causing pushdown bug on class icons */
+	/*border: 1px solid white; */
 	background-color: white;
 	cursor: default;
 }
 
 .player-icon {
 	display: inline-block;
-	padding-left: 5px;
-	padding-right: 5px;
+	/*padding-left: 5px;
+	padding-right: 5px;*/
 	text-align: center;
 	vertical-align: middle;
 	line-height: 80%;
@@ -117,8 +118,8 @@ body {
 
 .trashcan {
     display: inline-block;
-    border: 1px solid black;
-    background-color: lightgray;
+    border: 1px dashed black;
+    /*background-color: lightgray;*/
     vertical-align: middle;
     width: 100%;
 	line-height: 2em;
@@ -155,9 +156,42 @@ li {
 }
 
 .class-icon {
-	height: 1.0em;
+	height: 1.2em;
 	float: right;
-	filter: opacity(50%);
+	filter: opacity(60%);
+}
+
+.secondary-class {
+	height: 0.9em;
+	filter: opacity(40%);
+}
+
+.dlg {
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.dlg-content {
+	position: absolute;
+	left: 35%;
+	top: 35%;
+	width: 30%;
+	height: 30%;
+	/*margin-top: -5em;*/
+	z-index: 20;
+	background-color: white;
+	border: 1px solid black;
+	padding: 2em;
+	box-shadow: 3px 3px 7px gray;
+}
+
+textarea {
+	text-align: left;
 }
 
 </style>
@@ -444,8 +478,11 @@ function draw_player( player_struct, team_id ) {
 	var player_icon = document.createElement("div");
 	player_icon.className = "player-icon";
 	
+	/*text_node = document.createTextNode("\u00A0");
+	player_icon.appendChild(text_node);*/
+	
 	var icon_image = document.createElement("div");
-	icon_image.className = "icon-image";	
+	icon_image.className = "icon-image";
 	
 	var img_node = document.createElement("img");
 	img_node.className = "rank-icon";
@@ -454,6 +491,9 @@ function draw_player( player_struct, team_id ) {
 	img_node.title = rank_name;
 	icon_image.appendChild(img_node);
 	player_icon.appendChild(icon_image);
+	
+	/*text_node = document.createTextNode("\u00A0");
+	player_icon.appendChild(text_node);*/
 	
 	br_node = document.createElement("br");
 	player_icon.appendChild(br_node);
@@ -512,9 +552,13 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.appendChild(player_name);
 	
 	if ( player_struct.top_classes !== undefined ) {
+		//for(var i=player_struct.top_classes.length-1; i>=0; i--) {
 		for(var i=0; i<player_struct.top_classes.length; i++) {
 			var class_icon = document.createElement("img");
 			class_icon.className = "class-icon";
+			if( i != 0 )  {
+				class_icon.className += " secondary-class";
+			}
 			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
 			class_icon.title = player_struct.top_classes[i];
 			new_player_item.appendChild(class_icon);
@@ -985,7 +1029,15 @@ function export_lobby() {
 		};
 	var export_str = JSON.stringify(export_struct);
 	
-	alert(export_str);
+	//alert(export_str);
+	document.getElementById("popup_dlg").style.display = "block";
+	document.getElementById("dlg_title").innerHTML = "";
+	document.getElementById("dlg_textarea").value = export_str;
+	document.getElementById("dlg_textarea").style.display = "inline";
+	document.getElementById("dlg_textarea").select();
+	document.getElementById("dlg_textarea").focus();
+	
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
 }
 
 function import_lobby() {
@@ -1107,6 +1159,9 @@ function update_all_stats() {
 	update_next_player_stats();
 }
 
+function close_dialog() {
+	document.getElementById("popup_dlg").style.display = "none";
+}
 
 </script>
 </head>
@@ -1163,7 +1218,7 @@ Region
 			
 			<br/>
 			<div title="Drop player here to delete" class="trashcan" id="trashcan" ondrop="player_drop(event)" ondragover="player_allowDrop(event)">				
-				&#9760; Delete player
+				&#9760; Delete player (drop here)
 			</div>
 		</div>
 		
@@ -1181,7 +1236,7 @@ Region
 			</div>
 			
 			<div>
-			<span class="team-title">Team 1</span>
+			<span class="team-title" contenteditable="true">Team 1</span>
 			</div>
 			
 			<span id="team1_sr">0</span> average SR<br/>
@@ -1216,13 +1271,13 @@ Region
 			</div>
 			
 			<div>
-			<span class="team-title">Team 2</span>
+			<span class="team-title" contenteditable="true">Team 2</span>
 			</div>
 		
 			<span id="team2_sr">0</span> average SR<br/>
 			
 			<div class="table team" id="team2">
-				<!-- team 2 players  -->
+				<!-- team 2 players -->
 			</div>
 		</div>
 		
@@ -1234,6 +1289,7 @@ Region
 					<li>Add players by full BattleTag</li>
 					<li>Drag & drop players between teams</li>
 					<li>Right click on player name or SR to edit</li>
+					<li>Team names are editable</li>
 					<li>Player list automatically saved in your browser's storage</li>
 					<li>Click 'Balance teams' to automatically swap players between teams for minimum team SR difference</li>
 				</ul> 
@@ -1244,6 +1300,19 @@ Region
 
 </div>
 
+<div id="popup_dlg" class="dlg" style="display:none">
+	<div class="dlg-content">
+		<span id="dlg_title" class="team-title">Title</span>
+		<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog();" value="X"/>
+		<br/>
+		<br/>
+		<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
+		<br/>
+		<br/>
+		<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
+	<div>
+</div>
+
 <div id="test_result"></div>
 
 <script>
@@ -1251,7 +1320,13 @@ Region
 var saved_players_json = localStorage.getItem("saved_players");
 if ( saved_players_json != null ) {
 	lobby = JSON.parse(saved_players_json);
-	sort_team(lobby, 'display_name')
+	sort_team(lobby, 'display_name');
+	
+	// delete deprecated fields
+	for (var i=0; i<lobby.length; i++) {
+		delete lobby[i].current_sr;
+		delete lobby[i].max_sr;
+	}
 }
 
 var team_size_str = localStorage.getItem("team_size");
