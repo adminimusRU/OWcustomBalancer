@@ -131,6 +131,7 @@ body {
 	font-size: 16pt;
 	line-height: 2em;
 	vertical-align: middle;
+	width: 100%;
 }
 
 .team-toolbar {
@@ -196,6 +197,11 @@ textarea {
 	text-align: left;
 }
 
+.dlg_options {
+	text-align: left;
+	padding-left: 2em;
+}
+
 .filter {
 	border: 1px solid;
 	margin-bottom: 5px;
@@ -205,6 +211,45 @@ textarea {
 	/*border-color: blue;*/
 	outline: none;
 	box-shadow: 0 0 10px #9ecaed;
+}
+
+.group {
+	border: 1px solid gray;
+}
+
+.group-header {
+	background-color: lightgray;
+	user-select: none;
+	cursor: pointer;
+	font-size: 120%;
+	padding: 0.2em;
+}
+
+.header-icon {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 1px solid gray;
+	font-weight: bold;
+	text-align: center;
+	margin-right: 0.2em;
+	line-height: 1em;
+}
+
+.header-icon span {
+	vertical-align: middle;
+}
+
+.subgroup {
+	margin-left: 1em;
+}
+
+.group-collapsed {
+	display:none;
+}
+
+input.percent {
+	width: 3em;
 }
 
 </style>
@@ -477,7 +522,7 @@ function draw_player( player_struct, team_id ) {
 	var new_player_item = document.createElement("div");
 	new_player_item.className = "cell player-item";
 	new_player_item.id = player_struct.id;
-	new_player_item.title = player_struct.id;
+	new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
 	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
 	if( ! player_struct.empty) {
 		new_player_item.draggable = true;
@@ -575,6 +620,7 @@ function draw_player( player_struct, team_id ) {
 			}
 			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
 			class_icon.title = player_struct.top_classes[i];
+			class_icon.oncontextmenu = function(event){edit_player_class(event);};
 			new_player_item.appendChild(class_icon);
 		}
 	}
@@ -653,11 +699,36 @@ function swap_players() {
 	document.getElementById("swap_btn").disabled = true;
 }
 
-function calculate_team_sr( team ) {
+function calc_player_sr( player ) {
+	var player_sr = player.sr;
+	if (document.getElementById("balance_adjust_sr").checked) {
+		if ( player.top_classes !== undefined ) {
+			var top_class = player.top_classes[0];
+			if( top_class !== undefined ) {
+				player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
+			}
+		}
+	}
+	return player_sr;
+}
+
+function calculate_team_sr( team, use_balance_options=false ) {
 	var team_sr = 0;
 	if (team.length > 0) {
 		for( var i=0; i<team.length; i++) {
-			team_sr = team_sr + team[i].sr;
+			var player_sr = team[i].sr;
+			/*if (use_balance_options && document.getElementById("balance_adjust_sr").checked) {
+				if ( team[i].top_classes !== undefined ) {
+					var top_class = team[i].top_classes[0];
+					if( top_class !== undefined ) {
+						player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
+					}
+				}
+			}*/
+			if (use_balance_options) {
+				player_sr = calc_player_sr( team[i] );
+			}
+			team_sr += player_sr;
 		}
 		team_sr = Math.round(team_sr / team.length);
 	}
@@ -800,11 +871,22 @@ function create_empty_player() {
 		};
 }
 function create_random_player( id ) {
+	var class_names = [
+		"offence",
+		"defence",
+		"tank",
+		"support"
+		];
+	var top_classes = [];
+	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 ) );
+	top_classes.push( class_names[ Math.round(Math.random()*2) ] );
 	return {
 			id: "player"+id+"#1234",
 			display_name: "player"+id,
 			sr: Math.round(Math.random()*5000),
-			empty: false
+			level: Math.round(Math.random()*2000),
+			empty: false,
+			top_classes: top_classes
 		};
 }
 
@@ -842,7 +924,7 @@ function generate_team_combination(num, last) {
 	if (num == team_size) {
 		// composition is ready, store to list
 		var new_composition_players = current_team_combination.slice();
-		var composition_sr = calculate_team_sr(new_composition_players);
+		var composition_sr = calculate_team_sr(new_composition_players, true);
 		var sr_diff = Math.abs(2*composition_sr*team_size - active_players_total_sr);
 		var new_composition = {
 			sr: composition_sr,
@@ -873,7 +955,8 @@ function balance_teams() {
 	
 	active_players_total_sr = 0;
 	for (var i=0; i<active_players.length; i++ ) {
-		active_players_total_sr = active_players_total_sr + active_players[i].sr;
+		//active_players_total_sr = active_players_total_sr + active_players[i].sr;
+		active_players_total_sr += calc_player_sr( active_players[i] );
 	}
 	best_sr_diff = active_players_total_sr;
 	
@@ -1011,6 +1094,7 @@ function player_sr_change(ev) {
 	player_struct.sr = Number(input.value);
 	
 	save_players_list();
+	redraw_teams();
 }
 
 function cancel_player_edit() {
@@ -1044,6 +1128,7 @@ function export_lobby() {
 	var export_str = JSON.stringify(export_struct);
 	
 	//alert(export_str);
+	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_textarea").value = export_str;
@@ -1054,8 +1139,21 @@ function export_lobby() {
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
 }
 
+function import_lobby_dlg() {
+	init_popup_dlg();
+	document.getElementById("popup_dlg").style.display = "block";
+	document.getElementById("dlg_title").innerHTML = "Enter import string";
+	document.getElementById("dlg_textarea").value = "";
+	document.getElementById("dlg_textarea").style.display = "inline";
+	document.getElementById("dlg_textarea").select();
+	document.getElementById("dlg_textarea").focus();
+	
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();import_lobby();};
+}
+
 function import_lobby() {
-	var import_str = prompt("Enter import string");
+	//var import_str = prompt("Enter import string");
+	var import_str = document.getElementById("dlg_textarea").value;
 
 	if (import_str !== null && import_str != "") {
 		try {
@@ -1186,12 +1284,105 @@ function lobby_filter_change() {
 	}
 	
 	for( var i=0; i<lobby.length; i++) {
-		if ( filter_value == "" || lobby[i].display_name.toLowerCase().includes( filter_value ) ) {
+		if ( filter_value == "" || lobby[i].display_name.toLowerCase().includes( filter_value ) || lobby[i].id.toLowerCase().includes( filter_value ) ) {
 			document.getElementById(lobby[i].id).parentElement.style.display = "table-row";
 		} else {
 			document.getElementById(lobby[i].id).parentElement.style.display = "none";
 		}
 	}
+}
+
+function save_settings_value( element ) {
+	localStorage.setItem(element.id, element.value);
+}
+
+function collapse_group( header ) {
+	header.classList.toggle("header-expanded");
+	var group_expanded = header.classList.contains("header-expanded");
+	
+	var header_icon = header.getElementsByClassName("header-icon")[0];
+	if (group_expanded) {
+		header_icon.innerHTML = "<span>-</span>";
+	} else {
+		header_icon.innerHTML = "<span>+</span>";
+	}
+		
+	var group_content = header.parentElement.getElementsByClassName("group-content");
+	for (var i=0; i<group_content.length; i++ ) {
+		group_content[i].classList.toggle("group-collapsed");
+	}
+}
+
+function balance_adjust_sr_change() {
+	var adjust_enabled = document.getElementById("balance_adjust_sr").checked;
+	var inputs = document.getElementById("balance_adjust_sr_sub").getElementsByTagName("INPUT");
+	for (var i=0; i<inputs.length; i++ ) {
+		inputs[i].disabled = ! adjust_enabled;
+	}
+	localStorage.setItem( "balance_adjust_sr", adjust_enabled);
+}
+
+function edit_player_class(ev) {
+	if ( ev.button == 2) {
+		// edit player name
+		ev.preventDefault();
+		
+		cancel_player_edit();
+		
+		var player_id = ev.currentTarget.parentElement.id;
+		var player_struct = find_player_by_id(player_id);
+		
+		init_popup_dlg();
+		document.getElementById("popup_dlg").style.display = "block";
+		document.getElementById("dlg_title").innerHTML = player_struct.display_name;
+		document.getElementById("dlg_textarea").style.display = "none";
+		document.getElementById("dlg_class_select").style.display = "block";
+		
+		if ( player_struct.top_classes !== undefined ) {
+			if ( player_struct.top_classes.length > 0 ) {
+				document.getElementById("dlg_main_class").value = player_struct.top_classes[0];
+			}
+			
+			if ( player_struct.top_classes.length > 1 ) {
+				document.getElementById("dlg_secondary_class").value = player_struct.top_classes[1];
+			} else {
+				document.getElementById("dlg_secondary_class").value = "";
+			}
+		}
+		
+		document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player_class();};
+		
+		current_player_edit = player_id;
+		
+		// disable context menu
+		return false;
+	}
+}
+
+function change_player_class() {
+	if (current_player_edit == "") {
+		return;
+	}
+	
+	var top_classes = [];
+	top_classes.push( document.getElementById("dlg_main_class").value );
+	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
+		top_classes.push( document.getElementById("dlg_secondary_class").value );
+	}
+	
+	var player_struct = find_player_by_id(current_player_edit);
+	player_struct.top_classes = top_classes;
+	
+	current_player_edit = "";
+	
+	redraw_teams();
+}
+
+function init_popup_dlg() {
+	document.getElementById("dlg_title").innerHTML = "";
+	document.getElementById("dlg_textarea").style.display = "none";
+	document.getElementById("dlg_class_select").style.display = "none";
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
 }
 
 </script>
@@ -1229,8 +1420,8 @@ Region
 		<div class="cell">
 			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
-			<input title="Import lobby" type="button" class="team_btn" onclick="import_lobby();" value="Im"/>
-			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby();" value="Ex"/>
+			<input title="Import lobby" type="button" class="team_btn" onclick="import_lobby_dlg();" value="Import"/>
+			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby();" value="Export"/>
 			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
 			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_team(lobby, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
 			</div>
@@ -1283,11 +1474,11 @@ Region
 			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams"/>
 			<br/>
 			<br/>
-			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="Update stats"/>
+			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats"/>
 			
 			<br/>
 			<br/>
-			<input class="big-btn" style="display:none" type="button" onclick="fill_test_teams();" value="Test"/>
+			<input class="big-btn" style="display:none" type="button" onclick="fill_test_teams();" value="Generate random players"/>
 			</div>
 		</div>
 		
@@ -1312,6 +1503,33 @@ Region
 			<div class="table team" id="team2">
 				<!-- team 2 players -->
 			</div>
+			
+			<br/>
+			<div class="group">
+				<div class="group-header" onclick="collapse_group(this);">
+				<div class="header-icon"><span>+</span></div>
+				Balance settings
+				</div>
+				<div class="group-content group-collapsed">
+					<input type="checkbox" id="balance_adjust_sr" onchange="balance_adjust_sr_change();">Adjust player SR by main class </br>
+					<div class="subgroup" id="balance_adjust_sr_sub">
+						<img src="class_icons/offence.png" style="height: 1em;"/>
+						<input disabled id="balance_adjust_sr_offence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="120" onchange="save_settings_value(this);"/>
+						% SR for offence mains </br>
+						<img src="class_icons/tank.png" style="height: 1em;"/>
+						<input disabled id="balance_adjust_sr_tank" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="100" onchange="save_settings_value(this);"/>
+						% SR for tank mains </br>
+						<img src="class_icons/support.png" style="height: 1em;"/>
+						<input disabled id="balance_adjust_sr_support" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
+						% SR for support mains </br>
+						<img src="class_icons/defence.png" style="height: 1em;"/>
+						<input disabled id="balance_adjust_sr_defence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
+						% SR for defence mains </br>
+					</div>
+				</div>
+			</div>
+			
+			
 		</div>
 		
 		<div class="cell">
@@ -1321,9 +1539,10 @@ Region
 				<ul>
 					<li>Add players by full BattleTag</li>
 					<li>Drag & drop players between teams</li>
-					<li>Right click on player name or SR to edit</li>
+					<li>Right click on player name, SR or class icon to edit</li>
 					<li>Team names are editable</li>
-					<li>Player list automatically saved in your browser's storage</li>
+					<li>Player list and all settings automatically saved in your browser's storage</li>
+					<li>You can export and import player list from lobby</li>
 					<li>Click 'Balance teams' to automatically swap players between teams for minimum team SR difference</li>
 				</ul> 
 			</div>
@@ -1340,10 +1559,29 @@ Region
 		<br/>
 		<br/>
 		<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
+		<div id="dlg_class_select" class="dlg_options">
+			Main class: 
+			<select id="dlg_main_class">
+				<option value="offence">offence</option>
+				<option value="tank">tank</option>
+				<option value="support">support</option>
+				<option value="defence">defence</option>
+			</select>
+			<br/>
+			<br/>
+			Secondary class: 
+			<select id="dlg_secondary_class">
+				<option value="">-</option>
+				<option value="offence">offence</option>
+				<option value="tank">tank</option>
+				<option value="support">support</option>
+				<option value="defence">defence</option>
+			</select>
+		</div>
 		<br/>
 		<br/>
 		<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
-	<div>
+	</div>
 </div>
 
 <div id="test_result"></div>
@@ -1378,6 +1616,24 @@ document.getElementById("region").value = region;
 
 redraw_teams();
 
+// restore balance settings
+if( localStorage.getItem("balance_adjust_sr") !== null ) {
+	document.getElementById("balance_adjust_sr").checked = (localStorage.getItem("balance_adjust_sr") == 'true');
+	balance_adjust_sr_change();
+}
+
+var balance_settings = [
+	"balance_adjust_sr_offence",
+	"balance_adjust_sr_tank",
+	"balance_adjust_sr_support",
+	"balance_adjust_sr_defence" 
+	];
+
+for ( i in balance_settings ) {
+	if( localStorage.getItem(balance_settings[i]) !== null ) {
+		document.getElementById(balance_settings[i]).value = localStorage.getItem(balance_settings[i]);
+	}
+}
 </script>
 
 </body>
