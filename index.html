@@ -178,19 +178,38 @@ li {
 	vertical-align: middle;
 }
 
+.dlg-background {
+	background-color: black;
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	opacity: 0.5;
+}
+
+.dlg-container {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+}
+
 .dlg-content {
 	position: absolute;
-	left: 35%;
+	transform: translate(-50%,-50%);
+	/*left: 35%;
 	top: 35%;
 	width: 30%;
-	height: 30%;
+	height: 30%;*/
 	/*margin-top: -5em;*/
 	z-index: 20;
 	background-color: white;
-	border: 1px solid black;
+	/*border: 1px solid black;*/
 	padding: 2em;
 	padding-top: 0.5em;
-	box-shadow: 3px 3px 7px gray;
+	/*box-shadow: 3px 3px 7px gray;*/
+	box-shadow: 5px 5px 15px black;
+	
 }
 
 textarea {
@@ -200,6 +219,8 @@ textarea {
 .dlg_options {
 	text-align: left;
 	padding-left: 2em;
+	border-collapse: separate;
+	border-spacing: 0.5em;
 }
 
 .filter {
@@ -250,6 +271,10 @@ textarea {
 
 input.percent {
 	width: 3em;
+}
+
+input[readonly] {
+	border: none;
 }
 
 </style>
@@ -304,12 +329,14 @@ var hero_classes = {
 	reinhardt:	"tank",
 };
 
+
 var players_for_update = [];
+var total_playets_for_update = 0;
 
 function player_item_onclick(item, team_id) {
-	if ( item.id != current_player_edit ) {
+	/*if ( item.id != current_player_edit ) {
 		cancel_player_edit();
-	}
+	}*/
 
 	var prev_selected_id = "";
 	if (team_id == "team1") {
@@ -531,9 +558,10 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.ondrop = function(event){player_drop(event);};
 	new_player_item.ondragover = function(event){player_allowDrop(event);};
 	new_player_item.ondblclick = function(event){player_dblClick(event);};
+	new_player_item.oncontextmenu = function(event){player_contextmenu(event);};
 	new_player_item_row.appendChild(new_player_item);
 	
-	// rank icon and SR
+	// rank icon and SR value
 	var player_icon = document.createElement("div");
 	player_icon.className = "player-icon";
 	
@@ -553,7 +581,7 @@ function draw_player( player_struct, team_id ) {
 	
 	var icon_sr = document.createElement("div");
 	icon_sr.className = "icon-sr";
-	icon_sr.oncontextmenu = function(event){player_sr_click(event);};
+	//icon_sr.oncontextmenu = function(event){player_sr_click(event);};
 	
 	var sr_display = document.createElement("span");
 	sr_display.id = "sr_display_"+player_struct.id;
@@ -566,7 +594,7 @@ function draw_player( player_struct, team_id ) {
 	sr_display.appendChild(text_node);
 	icon_sr.appendChild(sr_display);
 	
-	var sr_input = document.createElement("input");
+	/*var sr_input = document.createElement("input");
 	sr_input.type = "text";
 	sr_input.className = "inline-edit sr-edit";
 	sr_input.style = "display:none";
@@ -575,8 +603,7 @@ function draw_player( player_struct, team_id ) {
 	sr_input.value = player_struct.sr;
 	sr_input.size = 4;
 	sr_input.onchange = function(event){player_sr_change(event);};
-	icon_sr.appendChild(sr_input);
-	
+	icon_sr.appendChild(sr_input);*/
 	
 	player_icon.appendChild(icon_sr);
 	
@@ -589,7 +616,7 @@ function draw_player( player_struct, team_id ) {
 	// player name
 	var player_name = document.createElement("div");
 	player_name.className = "player-name";
-	player_name.oncontextmenu = function(event){player_name_click(event);};
+	//player_name.oncontextmenu = function(event){player_name_click(event);};
 	
 	var name_display = document.createElement("span");
 	name_display.id = "name_display_"+player_struct.id;
@@ -597,7 +624,7 @@ function draw_player( player_struct, team_id ) {
 	name_display.appendChild(text_node);
 	player_name.appendChild(name_display);
 	
-	var name_input = document.createElement("input");
+	/*var name_input = document.createElement("input");
 	name_input.type = "text";
 	name_input.className = "inline-edit";
 	name_input.style = "display:none";
@@ -605,7 +632,7 @@ function draw_player( player_struct, team_id ) {
 	name_input.id = "name_edit_"+player_struct.id;
 	name_input.value = player_struct.display_name;
 	name_input.onchange = function(event){player_name_change(event);};
-	player_name.appendChild(name_input);
+	player_name.appendChild(name_input);*/
 	
 	new_player_item.appendChild(player_name);
 	
@@ -620,7 +647,7 @@ function draw_player( player_struct, team_id ) {
 			}
 			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
 			class_icon.title = player_struct.top_classes[i];
-			class_icon.oncontextmenu = function(event){edit_player_class(event);};
+			//class_icon.oncontextmenu = function(event){edit_player_class(event);};
 			new_player_item.appendChild(class_icon);
 		}
 	}
@@ -920,20 +947,65 @@ function fill_test_teams() {
 	redraw_teams();
 }
 
+function check_balance_restrictions( temp_team1 ) {
+	var temp_team2 = [];
+	for( i in active_players ) {
+		if ( temp_team1.indexOf(active_players[i]) == -1 ) {
+			temp_team2.push(active_players[i]);
+		}
+	}
+	if ( document.getElementById("balance_require_all_class").checked ) {
+		// check if team has at lest 2 dps, 2 tank and 2 support players
+		// @ToDo : one player cant play 2 roles at same time, fix
+		var team_meets_restricion = true;
+		var temp_teams = [temp_team1, temp_team2];
+		
+		for( t in temp_teams ) {
+			var team_dps = 0;
+			var team_tanks = 0;
+			var team_sups = 0;
+			
+			for( p in temp_teams[t]) {
+				for( c in temp_teams[t][p].top_classes ) {
+					switch( temp_teams[t][p].top_classes[c] ) {
+						case "offence":
+							team_dps++; break;
+						case "tank":
+							team_tanks++; break;
+						case "support":
+							team_sups++; break;
+					}
+				}
+			}
+			if( (team_dps<2) || (team_tanks<2) || (team_sups<2) ) {
+				team_meets_restricion = false;
+			}
+		};
+		
+		if( ! team_meets_restricion ) {
+			return false;
+		}
+	}
+	
+	return true;
+}
+
 function generate_team_combination(num, last) {
 	if (num == team_size) {
 		// composition is ready, store to list
 		var new_composition_players = current_team_combination.slice();
 		var composition_sr = calculate_team_sr(new_composition_players, true);
 		var sr_diff = Math.abs(2*composition_sr*team_size - active_players_total_sr);
+		var meets_restricion = check_balance_restrictions(new_composition_players);
 		var new_composition = {
 			sr: composition_sr,
 			sr_diff: sr_diff,
 			players: new_composition_players,
+			meets_restricion: meets_restricion
 		};
 		balance_team_combinations.push( new_composition );
 		
-		if( sr_diff < best_sr_diff ) {
+		if( (sr_diff < best_sr_diff) && new_composition.meets_restricion  ) {
 			best_sr_diff = sr_diff;
 			best_sr_diff_index = balance_team_combinations.length-1;
 		}
@@ -948,8 +1020,6 @@ function generate_team_combination(num, last) {
 
 function balance_teams() {
 	active_players = team1.concat(team2);
-	team1.splice( 0, team1.length );
-	team2.splice( 0, team2.length );
 	
 	sort_team( active_players );
 	
@@ -959,34 +1029,44 @@ function balance_teams() {
 		active_players_total_sr += calc_player_sr( active_players[i] );
 	}
 	best_sr_diff = active_players_total_sr;
+	best_sr_diff_index = -1;
 	
 	current_team_combination.splice( 0, current_team_combination.length );
 	balance_team_combinations.splice( 0, balance_team_combinations.length );
 	
 	generate_team_combination(0, 0);
 	
-	team1 = balance_team_combinations[best_sr_diff_index].players.slice();
-	for (var i=0; i<active_players.length; i++ ) {
-		if( team1.indexOf(active_players[i]) == -1 ) {
-			team2.push(active_players[i]);
+	if( best_sr_diff_index >= 0 ) {
+		team1.splice( 0, team1.length );
+		team2.splice( 0, team2.length );
+		
+		team1 = balance_team_combinations[best_sr_diff_index].players.slice();
+		for (var i=0; i<active_players.length; i++ ) {
+			if( team1.indexOf(active_players[i]) == -1 ) {
+				team2.push(active_players[i]);
+			}
 		}
+		
+		sort_team( team1 );
+		sort_team( team2 );
+		
+		redraw_teams();
+	} else {
+		alert("Can't find balance with current restricions. Try to change balance settings")
 	}
-	
-	sort_team( team1 );
-	sort_team( team2 );
-	
-	redraw_teams();
-	
 	
 	// debug
 	//alert( balance_team_combinations.length );
 	/*var res = "";
+	balance_team_combinations.sort(function(comb1, comb2){
+			return comb1.sr_diff-comb2.sr_diff;
+		});
 	for (var i=0; i<balance_team_combinations.length; i++ ) {
 		res = res + i + " : ";
 		for (var p=0; p<balance_team_combinations[i].players.length; p++) {
 			res = res + balance_team_combinations[i].players[p].display_name + " ";
 		}
-		res = res + " = " + balance_team_combinations[i].sr_diff + "<br/>";
+		res = res + " = SR " + balance_team_combinations[i].sr_diff + ", restrictions = " + balance_team_combinations[i].meets_restricion + "<br/>";
 		
 	}
 	res = res +  "best : " + best_sr_diff_index;
@@ -1023,6 +1103,8 @@ function find_player_by_id(player_id) {
 	return undefined;
 }
 
+// deprecated
+/*
 function player_name_click(ev) {
 	cancel_player_edit();
 	if ( ev.button == 2) {
@@ -1118,7 +1200,7 @@ function cancel_player_edit() {
 	display.style.display = "inline";
 	
 	current_player_edit = "";
-}
+}*/
 
 function export_lobby() {
 	var export_struct = {
@@ -1130,7 +1212,7 @@ function export_lobby() {
 	//alert(export_str);
 	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
-	document.getElementById("dlg_title").innerHTML = "";
+	document.getElementById("dlg_title").innerHTML = "Player list export";
 	document.getElementById("dlg_textarea").value = export_str;
 	document.getElementById("dlg_textarea").style.display = "inline";
 	document.getElementById("dlg_textarea").select();
@@ -1215,6 +1297,8 @@ function calculate_top_classes( hero_playtime ) {
 function update_next_player_stats( ) {
 	if ( players_for_update.length > 0 ) {
 		var current_player = players_for_update[0];
+		document.getElementById("update_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
+		
 		var xhttp = new XMLHttpRequest();
 		
 		xhttp.onreadystatechange = function() {
@@ -1227,9 +1311,13 @@ function update_next_player_stats( ) {
 					if ( stats_obj[region] !== null ) {
 						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
 						
-						player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+						if( document.getElementById("update_sr").checked ) {
+							player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+						}
 						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
-						player.top_classes = top_classes;
+						if( document.getElementById("update_class").checked ) {
+							player.top_classes = top_classes;
+						}
 					} else {
 						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
 							cancel_update = true;
@@ -1239,7 +1327,8 @@ function update_next_player_stats( ) {
 				
 				if( cancel_update) {
 					document.getElementById("update_stats_btn").disabled = false;
-					document.getElementById("update_stats_btn").value = "Update stats";
+					document.getElementById("dlg_update_player_stats").disabled = false;
+					document.getElementById("update_stats_btn").value = "↻ Update stats";
 					redraw_teams();
 				} else {
 					setTimeout( update_next_player_stats, min_api_request_interval );
@@ -1253,20 +1342,25 @@ function update_next_player_stats( ) {
 		// all players updated
 		alert("All stats updated");
 		document.getElementById("update_stats_btn").disabled = false;
-		document.getElementById("update_stats_btn").value = "Update stats";
+		document.getElementById("dlg_update_player_stats").disabled = false;
+		document.getElementById("update_stats_btn").value = "↻ Update stats";
 		redraw_teams();
+		fill_player_stats_dlg();
 	}
 }
 
 function update_all_stats() {
 	players_for_update.splice( 0, players_for_update.length );
 	players_for_update = lobby.concat(team1).concat(team2);
+	total_playets_for_update = players_for_update.length;
 	
 	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
-	alert("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.");
+	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
+		return;
+	};
 
 	document.getElementById("update_stats_btn").disabled = true;
-	document.getElementById("update_stats_btn").value = "Updating stats...";
+	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
 }
@@ -1293,7 +1387,11 @@ function lobby_filter_change() {
 }
 
 function save_settings_value( element ) {
-	localStorage.setItem(element.id, element.value);
+	if( element.type == "checkbox" ) {
+		localStorage.setItem(element.id, element.checked);
+	} else {
+		localStorage.setItem(element.id, element.value);
+	}
 }
 
 function collapse_group( header ) {
@@ -1322,6 +1420,8 @@ function balance_adjust_sr_change() {
 	localStorage.setItem( "balance_adjust_sr", adjust_enabled);
 }
 
+//deprecated
+/*
 function edit_player_class(ev) {
 	if ( ev.button == 2) {
 		// edit player name
@@ -1377,12 +1477,101 @@ function change_player_class() {
 	
 	redraw_teams();
 }
+*/
 
 function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_textarea").style.display = "none";
+	document.getElementById("dlg_player_edit").style.display = "none";
 	document.getElementById("dlg_class_select").style.display = "none";
+	document.getElementById("dlg_update_player_stats").style.display = "none";
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
+}
+
+function fill_player_stats_dlg() {
+	if (current_player_edit == "") {
+		return;
+	}
+	
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	document.getElementById("dlg_player_id").value = player_struct.id;
+	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
+	document.getElementById("dlg_player_sr").value = player_struct.sr;
+	
+	if ( player_struct.top_classes !== undefined ) {
+		if ( player_struct.top_classes.length > 0 ) {
+			document.getElementById("dlg_main_class").value = player_struct.top_classes[0];
+		}
+		
+		if ( player_struct.top_classes.length > 1 ) {
+			document.getElementById("dlg_secondary_class").value = player_struct.top_classes[1];
+		} else {
+			document.getElementById("dlg_secondary_class").value = "";
+		}
+	}
+}
+
+function player_contextmenu(ev) {
+	ev.preventDefault();
+	
+	var player_id = ev.currentTarget.id;
+	var player_struct = find_player_by_id(player_id);
+	
+	current_player_edit = player_id;
+	
+	init_popup_dlg();
+	document.getElementById("popup_dlg").style.display = "block";
+	document.getElementById("dlg_title").innerHTML = player_struct.display_name;
+	document.getElementById("dlg_player_edit").style.display = "block";
+	document.getElementById("dlg_class_select").style.display = "block";
+	document.getElementById("dlg_update_player_stats").style.display = "block";
+	
+	fill_player_stats_dlg();
+	
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player();};
+	
+	// disable context menu
+	return false;
+}
+
+function change_player() {
+	if (current_player_edit == "") {
+		return;
+	}
+	
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	player_struct.display_name = document.getElementById("dlg_player_display_name").value;
+	player_struct.sr = Number(document.getElementById("dlg_player_sr").value);
+	
+	var top_classes = [];
+	top_classes.push( document.getElementById("dlg_main_class").value );
+	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
+		top_classes.push( document.getElementById("dlg_secondary_class").value );
+	}
+	player_struct.top_classes = top_classes;
+	
+	current_player_edit = "";
+	
+	redraw_teams();
+}
+
+function update_current_player() {
+	if (current_player_edit == "") {
+		return;
+	}
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	players_for_update.splice( 0, players_for_update.length );
+	players_for_update.push( player_struct );
+	total_playets_for_update = players_for_update.length;
+	
+	document.getElementById("update_stats_btn").disabled = true;
+	document.getElementById("dlg_update_player_stats").disabled = true;
+	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	
+	update_next_player_stats();
 }
 
 </script>
@@ -1390,7 +1579,7 @@ function init_popup_dlg() {
 <body >
 
 <div class="page-title">Overwatch custom game balancer</div>
-<div class="copyright">© 2017 l33t m3at</div>
+<div class="copyright">2017 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Data from <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
 <br/>
 
 
@@ -1407,10 +1596,18 @@ Region
 
 <input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value="" onchange="add_player_click();"/> 
 <button onclick="add_player_click();" id="add_btn" >add player</button> to 
-<input class="team-selecor" type="radio" name="add_team_select" value="lobby" >lobby
-<input class="team-selecor" type="radio" name="add_team_select" value="team_1" >team 1 
-<input class="team-selecor" type="radio" name="add_team_select" value="team_2" >team 2 
-<input class="team-selecor" type="radio" name="add_team_select" value="team_auto" checked>auto team
+
+<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_lobby" value="lobby">
+<label for="add_team_select_lobby">lobby</label>
+
+<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_team1" value="team_1">
+<label for="add_team_select_team1">team 1</label> 
+
+<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_team2" value="team_2">
+<label for="add_team_select_team2">team 2</label> 
+
+<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_auto" value="team_auto" checked>
+<label for="add_team_select_auto">auto team</label>
 
 <br/>
 <br/>
@@ -1432,7 +1629,7 @@ Region
 			
 			<span id="lobby_count">0</span> players<br/>
 			
-			<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="filter by nickname" value="" oninput="lobby_filter_change();"/> 
+			<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="filter by name or battletag" value="" oninput="lobby_filter_change();"/> 
 			
 			<div class="lobby-container">
 				<div class="table team" id="lobby">
@@ -1483,6 +1680,10 @@ Region
 		</div>
 		
 		<div class="cell" style="vertical-align: top; padding-top: 10em; min-width: 5em; text-align: center;">
+		<br/>
+		<span style="font-size: 30pt;"><b><i>VS</i></b></span>
+		<br/>
+		<br/>
 		<input type="button" title="Swap selected players" id="swap_btn" disabled="true" onclick="swap_players();" value="&larr;&rarr;"/>
 		</div>
 		
@@ -1507,11 +1708,13 @@ Region
 			<br/>
 			<div class="group">
 				<div class="group-header" onclick="collapse_group(this);">
-				<div class="header-icon"><span>+</span></div>
-				Balance settings
+					<div class="header-icon"><span>+</span></div>
+					Balance settings
 				</div>
 				<div class="group-content group-collapsed">
-					<input type="checkbox" id="balance_adjust_sr" onchange="balance_adjust_sr_change();">Adjust player SR by main class </br>
+					<input type="checkbox" id="balance_adjust_sr" onchange="balance_adjust_sr_change();">
+					<label for="balance_adjust_sr">Adjust player SR by main class </label>
+					</br>
 					<div class="subgroup" id="balance_adjust_sr_sub">
 						<img src="class_icons/offence.png" style="height: 1em;"/>
 						<input disabled id="balance_adjust_sr_offence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="120" onchange="save_settings_value(this);"/>
@@ -1525,10 +1728,28 @@ Region
 						<img src="class_icons/defence.png" style="height: 1em;"/>
 						<input disabled id="balance_adjust_sr_defence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
 						% SR for defence mains </br>
-					</div>
+					</div></br>
+					<input type="checkbox" id="balance_require_all_class" onchange="save_settings_value(this);" title="Ensures that both teams will have at least 2 dps, 2 tank and 2 support players">
+					<label for="balance_require_all_class" title="Ensures that both teams will have at least 2 dps, 2 tank and 2 support players">Teams must have enough players for all roles</label>
 				</div>
 			</div>
 			
+			</br>
+			
+			<div class="group">
+				<div class="group-header" onclick="collapse_group(this);">
+					<div class="header-icon"><span>+</span></div>
+					Stats updating settings
+				</div>
+				<div class="group-content group-collapsed">
+					<input type="checkbox" id="update_sr" onchange="save_settings_value(this);" checked>
+					<label for="update_sr">Update player SR</label>
+					</br>
+					<input type="checkbox" id="update_class" onchange="save_settings_value(this);" checked>
+					<label for="update_class">Update player class</label>
+					</br>
+				</div>
+			</div>
 			
 		</div>
 		
@@ -1539,11 +1760,12 @@ Region
 				<ul>
 					<li>Add players by full BattleTag</li>
 					<li>Drag & drop players between teams</li>
-					<li>Right click on player name, SR or class icon to edit</li>
+					<li>Doble click on player to move between lobby and teams</li>
+					<li>Right click on player to edit name, SR and class</li>
 					<li>Team names are editable</li>
-					<li>Player list and all settings automatically saved in your browser's storage</li>
+					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>You can export and import player list from lobby</li>
-					<li>Click 'Balance teams' to automatically swap players between teams for minimum team SR difference</li>
+					<li>Click 'Balance teams' to automatically swap players between teams for minimum average SR difference</li>
 				</ul> 
 			</div>
 		</div>
@@ -1553,34 +1775,58 @@ Region
 </div>
 
 <div id="popup_dlg" class="dlg" style="display:none">
-	<div class="dlg-content">
-		<span id="dlg_title" class="team-title">Title</span>
-		<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog();" value="X"/>
-		<br/>
-		<br/>
-		<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
-		<div id="dlg_class_select" class="dlg_options">
-			Main class: 
-			<select id="dlg_main_class">
-				<option value="offence">offence</option>
-				<option value="tank">tank</option>
-				<option value="support">support</option>
-				<option value="defence">defence</option>
-			</select>
+	<div class="dlg-background"></div>
+	<div class="dlg-container">
+		<div class="dlg-content">
+			<span id="dlg_title" class="team-title">Title</span>
+			<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog();" value="X"/>
 			<br/>
 			<br/>
-			Secondary class: 
-			<select id="dlg_secondary_class">
-				<option value="">-</option>
-				<option value="offence">offence</option>
-				<option value="tank">tank</option>
-				<option value="support">support</option>
-				<option value="defence">defence</option>
-			</select>
+			<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
+			<div id="dlg_player_edit" class="dlg_options table">
+				<div class="row">
+					<div class="cell"><label for="dlg_player_id">BattleTag:</label></div>
+					<div class="cell"><input id="dlg_player_id" type="text" readonly></div>
+				</div>
+				<div class="row">
+					<div class="cell"><label for="dlg_player_display_name">Name:</label></div>
+					<div class="cell"><input id="dlg_player_display_name" type="text"></div>
+				</div>
+				<div class="row">
+					<div class="cell"><label for="dlg_player_sr">SR:</label></div>
+					<div class="cell"><input id="dlg_player_sr" type="number" min=0 max=5000></div>
+				</div>
+			</div>
+			<div id="dlg_class_select" class="dlg_options table">
+				<div class="row">
+					<div class="cell">Main class: </div>
+					<div class="cell">
+						<select id="dlg_main_class">
+							<option value="offence">offence</option>
+							<option value="tank">tank</option>
+							<option value="support">support</option>
+							<option value="defence">defence</option>
+						</select>
+					</div>
+				</div>
+				<div class="row">
+					<div class="cell">Secondary class: </div>
+					<div class="cell">
+						<select id="dlg_secondary_class">
+							<option value="">-</option>
+							<option value="offence">offence</option>
+							<option value="tank">tank</option>
+							<option value="support">support</option>
+							<option value="defence">defence</option>
+						</select>
+					</div>
+				</div>	
+			</div>
+			<br/>
+			<input id="dlg_update_player_stats" class="big-btn" type="button" value="&#8635; Update stats" onclick="update_current_player();"/>
+			<br/>
+			<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
 		</div>
-		<br/>
-		<br/>
-		<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
 	</div>
 </div>
 
@@ -1633,6 +1879,18 @@ for ( i in balance_settings ) {
 	if( localStorage.getItem(balance_settings[i]) !== null ) {
 		document.getElementById(balance_settings[i]).value = localStorage.getItem(balance_settings[i]);
 	}
+}
+
+if( localStorage.getItem("balance_require_all_class") !== null ) {
+	document.getElementById("balance_require_all_class").checked = (localStorage.getItem("balance_require_all_class") == 'true');
+}
+
+// restore update settings
+if( localStorage.getItem("update_class") !== null ) {
+	document.getElementById("update_class").checked = (localStorage.getItem("update_class") == 'true');
+}
+if( localStorage.getItem("update_sr") !== null ) {
+	document.getElementById("update_sr").checked = (localStorage.getItem("update_sr") == 'true');
 }
 </script>
 
