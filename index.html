@@ -29,6 +29,7 @@ body {
 
 .team-title {
 	font-size: 20pt;
+	border: none;
 }
 
 .table {
@@ -1662,6 +1663,7 @@ function change_export_format() {
 	document.getElementById("dlg_textarea").value = export_str.trim();
 }
 
+
 </script>
 </head>
 <body >
@@ -1745,12 +1747,12 @@ Region
 			</div>
 			
 			<div>
-			<span class="team-title" contenteditable="true">Team 1</span>
+			<input id="team1_name" type="text" class="team-title" value="Team 1" onchange="save_settings_value(this);">
 			</div>
 			
 			<span id="team1_sr">0</span> average SR<br/>
 			
-			<div class="table team" id="team1">
+			<div class="table team" id="team1" style="background-color: DodgerBlue;">
 				<!-- team 1 players -->
 			</div>
 			
@@ -1784,12 +1786,12 @@ Region
 			</div>
 			
 			<div>
-			<span class="team-title" contenteditable="true">Team 2</span>
+			<input id="team2_name" type="text" class="team-title" value="Team 2" onchange="save_settings_value(this);">
 			</div>
 		
 			<span id="team2_sr">0</span> average SR<br/>
 			
-			<div class="table team" id="team2">
+			<div class="table team" id="team2" style="background-color: tomato;">
 				<!-- team 2 players -->
 			</div>
 			
@@ -2004,8 +2006,10 @@ if( localStorage.getItem("update_edited_fields") !== null ) {
 }
 */
 
-// restore settings
+// restore settings and team names
 var settings_list = [
+	"team1_name",
+	"team2_name",
 	"balance_adjust_sr",
 	"balance_adjust_sr_offence",
 	"balance_adjust_sr_tank",
