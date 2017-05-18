@@ -528,6 +528,12 @@ function player_dblClick(ev) {
 		new_team = lobby;
 	}
 	
+	// check if team has free slots
+	if ( (new_team != lobby) && (new_team.length >= team_size) ) {
+		alert("Team is full");
+		return;
+	}
+	
 	// move player
 	new_team.push( selected_player );
 	selected_team.splice(selected_index, 1);
@@ -693,8 +699,10 @@ function redraw_teams() {
 
 function save_players_list() {
 	// store players to browser local storage
-	var all_players = lobby.concat(team1).concat(team2);
-	localStorage.setItem("saved_players", JSON.stringify(all_players));
+	//var all_players = lobby.concat(team1).concat(team2);
+	localStorage.setItem("saved_players", JSON.stringify(lobby));
+	localStorage.setItem("saved_players_team1", JSON.stringify(team1));
+	localStorage.setItem("saved_players_team2", JSON.stringify(team2));
 }
 
 function swap_players() {
@@ -837,6 +845,12 @@ function add_player_click() {
 		}
 	}
 	
+	// check if team has free slots
+	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
+		alert("Team is full");
+		return;
+	}
+	
 	var xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 ) {
@@ -848,7 +862,7 @@ function add_player_click() {
 					var new_player = {
 						id: player_id,
 						display_name: player_name, 
-						sr: stats_obj[region].stats.competitive.overall_stats.comprank,
+						sr: Number(stats_obj[region].stats.competitive.overall_stats.comprank),
 						level: stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
 						top_classes: top_classes,
 					};
@@ -1356,7 +1370,7 @@ function update_next_player_stats( ) {
 						if( document.getElementById("update_sr").checked ) {
 							// check if SR was manually edited and update option checked
 							if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
-								player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+								player.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
 							}
 						}
 						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
@@ -1663,6 +1677,26 @@ function change_export_format() {
 	document.getElementById("dlg_textarea").value = export_str.trim();
 }
 
+function restore_team( team, team_name ) {
+	var saved_players_json = localStorage.getItem("saved_players"+team_name);
+	if ( saved_players_json != null ) {
+		var saved_team = JSON.parse(saved_players_json);
+		for ( var i in saved_team ) {
+			team.push( saved_team[i] );
+		}
+		//sort_team(lobby, 'display_name');
+		
+		// delete deprecated fields, add new fields
+		for (var i=0; i<team.length; i++) {
+			delete team[i].current_sr;
+			delete team[i].max_sr;
+			
+			if ( ! Array.isArray(team[i].top_classes) ) {
+				team[i].top_classes = [];
+			}
+		}
+	}
+}
 
 </script>
 </head>
@@ -1937,22 +1971,10 @@ Region
 <div id="test_result"></div>
 
 <script>
-//restore saved players to lobby
-var saved_players_json = localStorage.getItem("saved_players");
-if ( saved_players_json != null ) {
-	lobby = JSON.parse(saved_players_json);
-	sort_team(lobby, 'display_name');
-	
-	// delete deprecated fields, add new fields
-	for (var i=0; i<lobby.length; i++) {
-		delete lobby[i].current_sr;
-		delete lobby[i].max_sr;
-		
-		if ( ! Array.isArray(lobby[i].top_classes) ) {
-			lobby[i].top_classes = [];
-		}
-	}
-}
+//restore saved players to teams
+restore_team( lobby, "" );
+restore_team( team1, "_team1" );
+restore_team( team2, "_team2" );
 
 var team_size_str = localStorage.getItem("team_size");
 if ( team_size_str != null ) {
