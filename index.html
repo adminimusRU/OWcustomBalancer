@@ -55,7 +55,7 @@ body {
 	background-color: lightgray;
 	border-collapse: separate;
 	border-spacing: 5px 5px;
-	min-width: 15em;
+	min-width: 17em;
 }
 
 .player-item {
@@ -236,6 +236,7 @@ textarea {
 
 .group {
 	border: 1px solid gray;
+	max-width: 17em;
 }
 
 .group-header {
@@ -924,19 +925,19 @@ function move_team_to_lobby(team) {
 
 function fill_test_teams() {
 	// fill teams with ramdom players
-	team1.splice( 0, team1.length );
+	/*team1.splice( 0, team1.length );
 	team2.splice( 0, team2.length );
-	lobby.splice( 0, lobby.length );
+	lobby.splice( 0, lobby.length );*/
 	
 	var new_player;
 	for( var i=1; i<=team_size; i++ ) {
 		new_player = create_random_player(i);
-		team1.push( new_player );
+		lobby.push( new_player );
 	}
 
 	for( var i=team_size+1; i<=team_size*2; i++ ) {
 		new_player = create_random_player(i);
-		team2.push( new_player );
+		lobby.push( new_player );
 	}
 
 	for( var i=team_size*2+1; i<=team_size*3; i++ ) {
@@ -1203,28 +1204,37 @@ function cancel_player_edit() {
 }*/
 
 function export_lobby() {
-	var export_struct = {
+	/*var export_struct = {
 		format_version: 1,
 		players: lobby
 		};
-	var export_str = JSON.stringify(export_struct);
+	var export_str = JSON.stringify(export_struct);*/
 	
 	//alert(export_str);
 	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
 	document.getElementById("dlg_title").innerHTML = "Player list export";
-	document.getElementById("dlg_textarea").value = export_str;
+	document.getElementById("dlg_import_export_format").style.display = "block";
+	document.getElementById("dlg_operation").innerHTML = "Export";
+	document.getElementById("dlg_format_value").value = "json";
+	document.getElementById("dlg_format_value").onchange = function(event){change_export_format();};
+	//document.getElementById("dlg_textarea").value = export_str;
 	document.getElementById("dlg_textarea").style.display = "inline";
 	document.getElementById("dlg_textarea").select();
 	document.getElementById("dlg_textarea").focus();
 	
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
+	
+	change_export_format();
 }
 
 function import_lobby_dlg() {
 	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
 	document.getElementById("dlg_title").innerHTML = "Enter import string";
+	document.getElementById("dlg_import_export_format").style.display = "block";
+	document.getElementById("dlg_operation").innerHTML = "Import";
+	document.getElementById("dlg_format_value").value = "json";
 	document.getElementById("dlg_textarea").value = "";
 	document.getElementById("dlg_textarea").style.display = "inline";
 	document.getElementById("dlg_textarea").select();
@@ -1238,22 +1248,53 @@ function import_lobby() {
 	var import_str = document.getElementById("dlg_textarea").value;
 
 	if (import_str !== null && import_str != "") {
-		try {
-			// try to parse json
-			var import_struct = JSON.parse(import_str);
-			
-			for( var i=0; i<import_struct.players.length; i++) {
-				// check duplicates
-				if (find_player_by_id(import_struct.players[i].id) === undefined ) {
+		if ( document.getElementById("dlg_format_value").value == "json" ) {
+			try {
+				// try to parse json
+				var import_struct = JSON.parse(import_str);
+				
+				for( var i=0; i<import_struct.players.length; i++) {
+					// check duplicates
+					if (find_player_by_id(import_struct.players[i].id) !== undefined ) {
+						continue;
+					}
+					
+					if ( ! Array.isArray(import_struct.players[i].top_classes) ) {
+						import_struct.players[i].top_classes = [];
+					}
+					
 					lobby.splice(lobby.length, 0, import_struct.players[i]);
 				}
+				
+				redraw_teams();
 			}
-			
+			catch(err) {
+				// try to parse as plain battletag list
+				alert("Incorrect import format");
+			}
+		} else if (document.getElementById("dlg_format_value").value == "battletags") {
+			var battletag_list = import_str.trim().split("\n");
+			for( i in battletag_list ) {
+				var player_id = battletag_list[i].trim();
+				player_id = player_id.trim().replace("#", "-");
+				var player_name = player_id.slice( 0, player_id.search("-") );
+				var new_player = {
+						id: player_id,
+						display_name: player_name, 
+						sr: 0,
+						level: 0,
+						top_classes: [],
+					};
+				lobby.push( new_player );
+				players_for_update.push( new_player );
+			}
 			redraw_teams();
-		}
-		catch(err) {
-			// try to parse as plain battletag list
-			alert("Incorrect import format");
+			
+			// get stats for added players
+			total_playets_for_update = players_for_update.length;
+			document.getElementById("update_stats_btn").disabled = true;
+			document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+			update_next_player_stats();
 		}
 	}
 }
@@ -1276,7 +1317,7 @@ function calculate_top_classes( hero_playtime ) {
 	
 	var class_playtime_arr = Object.entries(class_playtime);
 	class_playtime_arr.sort( function(item1, item2){
-			return item2[1]-item1[1];
+			return item2[1]-item1[1];	
 		});
 	
 	var top_classes = [];
@@ -1312,11 +1353,17 @@ function update_next_player_stats( ) {
 						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
 						
 						if( document.getElementById("update_sr").checked ) {
-							player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+							// check if SR was manually edited and update option checked
+							if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
+								player.sr = stats_obj[region].stats.competitive.overall_stats.comprank;
+							}
 						}
 						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
 						if( document.getElementById("update_class").checked ) {
-							player.top_classes = top_classes;
+							// check if class was manually edited and update option checked
+							if ( (player.ce !== true) || document.getElementById("update_edited_fields").checked ) {
+								player.top_classes = top_classes;
+							}
 						}
 					} else {
 						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
@@ -1481,6 +1528,8 @@ function change_player_class() {
 
 function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
+	document.getElementById("dlg_import_export_format").style.display = "none";
+	document.getElementById("dlg_format_value").onchange = function(event){;};
 	document.getElementById("dlg_textarea").style.display = "none";
 	document.getElementById("dlg_player_edit").style.display = "none";
 	document.getElementById("dlg_class_select").style.display = "none";
@@ -1498,6 +1547,7 @@ function fill_player_stats_dlg() {
 	document.getElementById("dlg_player_id").value = player_struct.id;
 	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
 	document.getElementById("dlg_player_sr").value = player_struct.sr;
+	document.getElementById("dlg_player_level").value = player_struct.level;
 	
 	if ( player_struct.top_classes !== undefined ) {
 		if ( player_struct.top_classes.length > 0 ) {
@@ -1542,13 +1592,33 @@ function change_player() {
 	
 	var player_struct = find_player_by_id(current_player_edit);
 	
-	player_struct.display_name = document.getElementById("dlg_player_display_name").value;
-	player_struct.sr = Number(document.getElementById("dlg_player_sr").value);
+	var new_name = document.getElementById("dlg_player_display_name").value;
+	if ( player_struct.display_name != new_name ) {
+		player_struct.ne = true; // name edited
+	}
+	player_struct.display_name = new_name;
+	
+	var new_sr = Number(document.getElementById("dlg_player_sr").value);
+	if ( player_struct.sr != new_sr ) {
+		player_struct.se = true; // sr edited
+	}
+	player_struct.sr = new_sr;
 	
 	var top_classes = [];
 	top_classes.push( document.getElementById("dlg_main_class").value );
 	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
 		top_classes.push( document.getElementById("dlg_secondary_class").value );
+	}
+	if ( player_struct.top_classes.length != top_classes.length ) {
+		player_struct.ce = true; // class edited
+	} else {
+		for (i in top_classes) {
+			if ( top_classes[i] != player_struct.top_classes[i] ) {
+				player_struct.ce = true;
+				break;
+			}
+		}
+	
 	}
 	player_struct.top_classes = top_classes;
 	
@@ -1557,7 +1627,7 @@ function change_player() {
 	redraw_teams();
 }
 
-function update_current_player() {
+function update_current_player_stats() {
 	if (current_player_edit == "") {
 		return;
 	}
@@ -1572,6 +1642,24 @@ function update_current_player() {
 	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
+}
+
+function change_export_format() {
+	var export_str = "";
+	if ( document.getElementById("dlg_format_value").value == "json" ) {
+		var export_struct = {
+			format_version: 1,
+			players: lobby
+			};
+		export_str = JSON.stringify(export_struct);
+	} else if ( document.getElementById("dlg_format_value").value == "battletags" ) {
+		for( i in lobby) {
+			var player_id = lobby[i].id.trim().replace("-", "#");
+			export_str += player_id + "\n";
+		}
+	}
+	
+	document.getElementById("dlg_textarea").value = export_str.trim();
 }
 
 </script>
@@ -1675,7 +1763,7 @@ Region
 			
 			<br/>
 			<br/>
-			<input class="big-btn" style="display:none" type="button" onclick="fill_test_teams();" value="Generate random players"/>
+			<input class="big-btn" type="button" onclick="fill_test_teams();" value="Generate random players"/>
 			</div>
 		</div>
 		
@@ -1748,6 +1836,9 @@ Region
 					<input type="checkbox" id="update_class" onchange="save_settings_value(this);" checked>
 					<label for="update_class">Update player class</label>
 					</br>
+					<input type="checkbox" id="update_edited_fields" onchange="save_settings_value(this);">
+					<label for="update_edited_fields">Update manually edited fields (name, SR, class)</label>
+					</br>
 				</div>
 			</div>
 			
@@ -1782,6 +1873,13 @@ Region
 			<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog();" value="X"/>
 			<br/>
 			<br/>
+			<div id="dlg_import_export_format" class="dlg_options ">
+				<label for=""><span id="dlg_operation">Export</span> format: </label>
+				<select id="dlg_format_value">
+					<option value="json">JSON (full info)</option>
+					<option value="battletags">plain text (BattleTags only)</option>
+				</select>
+			</div>
 			<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
 			<div id="dlg_player_edit" class="dlg_options table">
 				<div class="row">
@@ -1791,6 +1889,10 @@ Region
 				<div class="row">
 					<div class="cell"><label for="dlg_player_display_name">Name:</label></div>
 					<div class="cell"><input id="dlg_player_display_name" type="text"></div>
+				</div>
+				<div class="row">
+					<div class="cell"><label for="dlg_player_level">Level:</label></div>
+					<div class="cell"><input id="dlg_player_level" type="text" readonly></div>
 				</div>
 				<div class="row">
 					<div class="cell"><label for="dlg_player_sr">SR:</label></div>
@@ -1823,7 +1925,7 @@ Region
 				</div>	
 			</div>
 			<br/>
-			<input id="dlg_update_player_stats" class="big-btn" type="button" value="&#8635; Update stats" onclick="update_current_player();"/>
+			<input id="dlg_update_player_stats" class="big-btn" type="button" value="&#8635; Update stats" onclick="update_current_player_stats();"/>
 			<br/>
 			<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
 		</div>
@@ -1839,10 +1941,14 @@ if ( saved_players_json != null ) {
 	lobby = JSON.parse(saved_players_json);
 	sort_team(lobby, 'display_name');
 	
-	// delete deprecated fields
+	// delete deprecated fields, add new fields
 	for (var i=0; i<lobby.length; i++) {
 		delete lobby[i].current_sr;
 		delete lobby[i].max_sr;
+		
+		if ( ! Array.isArray(lobby[i].top_classes) ) {
+			lobby[i].top_classes = [];
+		}
 	}
 }
 
@@ -1863,6 +1969,7 @@ document.getElementById("region").value = region;
 redraw_teams();
 
 // restore balance settings
+/*
 if( localStorage.getItem("balance_adjust_sr") !== null ) {
 	document.getElementById("balance_adjust_sr").checked = (localStorage.getItem("balance_adjust_sr") == 'true');
 	balance_adjust_sr_change();
@@ -1892,6 +1999,40 @@ if( localStorage.getItem("update_class") !== null ) {
 if( localStorage.getItem("update_sr") !== null ) {
 	document.getElementById("update_sr").checked = (localStorage.getItem("update_sr") == 'true');
 }
+if( localStorage.getItem("update_edited_fields") !== null ) {
+	document.getElementById("update_edited_fields").checked = (localStorage.getItem("update_edited_fields") == 'true');
+}
+*/
+
+// restore settings
+var settings_list = [
+	"balance_adjust_sr",
+	"balance_adjust_sr_offence",
+	"balance_adjust_sr_tank",
+	"balance_adjust_sr_support",
+	"balance_adjust_sr_defence",
+	"balance_require_all_class",
+	"update_class",
+	"update_sr",
+	"update_edited_fields"
+	];
+
+for ( i in settings_list ) {
+	var setting_value = localStorage.getItem(settings_list[i]);
+	if( setting_value !== null ) {
+		var setting_input = document.getElementById(settings_list[i]);
+		if ( setting_input.type == "checkbox" ) {
+			setting_input.checked = (setting_value == 'true');
+		} else if ( setting_input.type == "text" ) {
+			setting_input.value = setting_value;
+		} else if ( setting_input.type == "number" ) {
+			setting_input.value = Number(setting_value);
+		}
+		
+	}
+}
+balance_adjust_sr_change();
+
 </script>
 
 </body>
