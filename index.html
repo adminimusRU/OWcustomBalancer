@@ -1844,6 +1844,15 @@ for ( i in settings_list ) {
 		
 	}
 }
+
+// set default values to inputs
+if (document.getElementById("team_size").value == 0 ) {
+	document.getElementById("team_size").value = team_size;
+}
+if (document.getElementById("region").value == "" ) {
+	document.getElementById("region").value = region;
+}
+
 update_team_size();
 update_region();
 balance_adjust_sr_change();
