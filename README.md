@@ -1,8 +1,10 @@
 # Overwatch custom game balancer
 Tool for balancing teams in Overwatch custom games.
 
+[Live version on GitHub Pages](https://adminimusru.github.io/OWcustomBalancer/index.html)
+
 ## Features:
-  * New players added by BattleTag, all stats (current SR, level, most played roles/classes) are automatically acquired via [OWAPI](https://github.com/SunDwarf/OWAPI);
+  * New players added by BattleTag, all stats (current competitive SR, level, most played roles/classes) are automatically acquired via [OWAPI](https://github.com/SunDwarf/OWAPI);
   * Lobby used to store any amount of players (limited only by browser storage size);
   * Multiple ways to move players between lobby and teams:
     * Select and swap;
