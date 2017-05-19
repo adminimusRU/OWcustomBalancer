@@ -60,16 +60,12 @@ body {
 }
 
 .player-item {
-	/* -- causing pushdown bug on class icons */
-	/*border: 1px solid white; */
 	background-color: white;
 	cursor: default;
 }
 
 .player-icon {
 	display: inline-block;
-	/*padding-left: 5px;
-	padding-right: 5px;*/
 	text-align: center;
 	vertical-align: middle;
 	line-height: 80%;
@@ -120,7 +116,6 @@ body {
 .trashcan {
     display: inline-block;
     border: 1px dashed black;
-    /*background-color: lightgray;*/
     vertical-align: middle;
     width: 100%;
 	line-height: 2em;
@@ -198,17 +193,10 @@ li {
 .dlg-content {
 	position: absolute;
 	transform: translate(-50%,-50%);
-	/*left: 35%;
-	top: 35%;
-	width: 30%;
-	height: 30%;*/
-	/*margin-top: -5em;*/
 	z-index: 20;
 	background-color: white;
-	/*border: 1px solid black;*/
 	padding: 2em;
 	padding-top: 0.5em;
-	/*box-shadow: 3px 3px 7px gray;*/
 	box-shadow: 5px 5px 15px black;
 	
 }
@@ -230,7 +218,6 @@ textarea {
 }
 
 .filter-active {
-	/*border-color: blue;*/
 	outline: none;
 	box-shadow: 0 0 10px #9ecaed;
 }
@@ -336,10 +323,6 @@ var players_for_update = [];
 var total_playets_for_update = 0;
 
 function player_item_onclick(item, team_id) {
-	/*if ( item.id != current_player_edit ) {
-		cancel_player_edit();
-	}*/
-
 	var prev_selected_id = "";
 	if (team_id == "team1") {
 		prev_selected_id = selected_player_team1;
@@ -471,7 +454,6 @@ function player_drop(ev) {
 		dragged_team.splice(dragged_index, 1);
 	} else {
 		if (target_id == "") {
-			//team2.splice(dragged_index,1);
 			// remove dragged player from source team
 			dragged_team.splice(dragged_index, 1);
 		} else {
@@ -569,7 +551,7 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.oncontextmenu = function(event){player_contextmenu(event);};
 	new_player_item_row.appendChild(new_player_item);
 	
-	// rank icon and SR value
+	// rank icon
 	var player_icon = document.createElement("div");
 	player_icon.className = "player-icon";
 	
@@ -587,9 +569,9 @@ function draw_player( player_struct, team_id ) {
 	br_node = document.createElement("br");
 	player_icon.appendChild(br_node);
 	
+	// SR value
 	var icon_sr = document.createElement("div");
 	icon_sr.className = "icon-sr";
-	//icon_sr.oncontextmenu = function(event){player_sr_click(event);};
 	
 	var sr_display = document.createElement("span");
 	sr_display.id = "sr_display_"+player_struct.id;
@@ -602,17 +584,6 @@ function draw_player( player_struct, team_id ) {
 	sr_display.appendChild(text_node);
 	icon_sr.appendChild(sr_display);
 	
-	/*var sr_input = document.createElement("input");
-	sr_input.type = "text";
-	sr_input.className = "inline-edit sr-edit";
-	sr_input.style = "display:none";
-	sr_input.name = player_struct.id;
-	sr_input.id = "sr_edit_"+player_struct.id;
-	sr_input.value = player_struct.sr;
-	sr_input.size = 4;
-	sr_input.onchange = function(event){player_sr_change(event);};
-	icon_sr.appendChild(sr_input);*/
-	
 	player_icon.appendChild(icon_sr);
 	
 	new_player_item.appendChild(player_icon);
@@ -624,7 +595,6 @@ function draw_player( player_struct, team_id ) {
 	// player name
 	var player_name = document.createElement("div");
 	player_name.className = "player-name";
-	//player_name.oncontextmenu = function(event){player_name_click(event);};
 	
 	var name_display = document.createElement("span");
 	name_display.id = "name_display_"+player_struct.id;
@@ -632,21 +602,10 @@ function draw_player( player_struct, team_id ) {
 	name_display.appendChild(text_node);
 	player_name.appendChild(name_display);
 	
-	/*var name_input = document.createElement("input");
-	name_input.type = "text";
-	name_input.className = "inline-edit";
-	name_input.style = "display:none";
-	name_input.name = player_struct.id;
-	name_input.id = "name_edit_"+player_struct.id;
-	name_input.value = player_struct.display_name;
-	name_input.onchange = function(event){player_name_change(event);};
-	player_name.appendChild(name_input);*/
-	
 	new_player_item.appendChild(player_name);
 	
 	// class icons
 	if ( player_struct.top_classes !== undefined ) {
-		//for(var i=player_struct.top_classes.length-1; i>=0; i--) {
 		for(var i=0; i<player_struct.top_classes.length; i++) {
 			var class_icon = document.createElement("img");
 			class_icon.className = "class-icon";
@@ -655,7 +614,6 @@ function draw_player( player_struct, team_id ) {
 			}
 			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
 			class_icon.title = player_struct.top_classes[i];
-			//class_icon.oncontextmenu = function(event){edit_player_class(event);};
 			new_player_item.appendChild(class_icon);
 		}
 	}
@@ -699,7 +657,6 @@ function redraw_teams() {
 
 function save_players_list() {
 	// store players to browser local storage
-	//var all_players = lobby.concat(team1).concat(team2);
 	localStorage.setItem("saved_players", JSON.stringify(lobby));
 	localStorage.setItem("saved_players_team1", JSON.stringify(team1));
 	localStorage.setItem("saved_players_team2", JSON.stringify(team2));
@@ -754,14 +711,6 @@ function calculate_team_sr( team, use_balance_options=false ) {
 	if (team.length > 0) {
 		for( var i=0; i<team.length; i++) {
 			var player_sr = team[i].sr;
-			/*if (use_balance_options && document.getElementById("balance_adjust_sr").checked) {
-				if ( team[i].top_classes !== undefined ) {
-					var top_class = team[i].top_classes[0];
-					if( top_class !== undefined ) {
-						player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
-					}
-				}
-			}*/
 			if (use_balance_options) {
 				player_sr = calc_player_sr( team[i] );
 			}
@@ -940,10 +889,6 @@ function move_team_to_lobby(team) {
 
 function fill_test_teams() {
 	// fill teams with ramdom players
-	/*team1.splice( 0, team1.length );
-	team2.splice( 0, team2.length );
-	lobby.splice( 0, lobby.length );*/
-	
 	var new_player;
 	for( var i=1; i<=team_size; i++ ) {
 		new_player = create_random_player(i);
@@ -972,7 +917,7 @@ function check_balance_restrictions( temp_team1 ) {
 	}
 	if ( document.getElementById("balance_require_all_class").checked ) {
 		// check if team has at lest 2 dps, 2 tank and 2 support players
-		// @ToDo : one player cant play 2 roles at same time, fix
+		// fast approximation, calculating all combinations is too much
 		var team_meets_restricion = true;
 		var temp_teams = [temp_team1, temp_team2];
 		
@@ -1041,7 +986,6 @@ function balance_teams() {
 	
 	active_players_total_sr = 0;
 	for (var i=0; i<active_players.length; i++ ) {
-		//active_players_total_sr = active_players_total_sr + active_players[i].sr;
 		active_players_total_sr += calc_player_sr( active_players[i] );
 	}
 	best_sr_diff = active_players_total_sr;
@@ -1071,8 +1015,7 @@ function balance_teams() {
 		alert("Can't find balance with current restricions. Try to change balance settings")
 	}
 	
-	// debug
-	//alert( balance_team_combinations.length );
+	// balance debug
 	/*var res = "";
 	balance_team_combinations.sort(function(comb1, comb2){
 			return comb1.sr_diff-comb2.sr_diff;
@@ -1119,113 +1062,7 @@ function find_player_by_id(player_id) {
 	return undefined;
 }
 
-// deprecated
-/*
-function player_name_click(ev) {
-	cancel_player_edit();
-	if ( ev.button == 2) {
-		// edit player name
-		ev.preventDefault();
-		
-		cancel_player_edit();
-		
-		var player_id = ev.currentTarget.parentElement.id;
-		var input = document.getElementById("name_edit_"+player_id);
-		input.style.display = "inline";
-		
-		var display = document.getElementById("name_display_"+player_id);
-		display.style.display = "none";
-		
-		current_player_edit = player_id;
-		
-		return false;
-	}
-}
-
-function player_name_change(ev) {
-	var player_id = ev.currentTarget.parentElement.parentElement.id;
-	var input = document.getElementById("name_edit_"+player_id);
-	input.style.display = "none";
-	
-	var display = document.getElementById("name_display_"+player_id);
-	display.style.display = "inline";
-	display.innerHTML = input.value;
-	
-	var player_struct = find_player_by_id(player_id);
-	player_struct.display_name = input.value;
-	
-	save_players_list();
-}
-
-function player_sr_click(ev) {
-	if ( ev.button == 2) {
-		// edit player name
-		ev.preventDefault();
-		
-		cancel_player_edit();
-		
-		var player_id = ev.currentTarget.parentElement.parentElement.id;
-		
-		var input = document.getElementById("sr_edit_"+player_id);
-		input.style.display = "inline";
-		
-		var display = document.getElementById("sr_display_"+player_id);
-		display.style.display = "none";
-		
-		current_player_edit = player_id;
-		
-		// disable context menu
-		return false;
-	}
-}
-
-function player_sr_change(ev) {
-	var player_id = ev.currentTarget.parentElement.parentElement.parentElement.id;
-	var input = document.getElementById("sr_edit_"+player_id);
-	input.style.display = "none";
-	
-	var display = document.getElementById("sr_display_"+player_id);
-	display.style.display = "inline";
-	display.innerHTML = input.value;
-	
-	var player_struct = find_player_by_id(player_id);
-	player_struct.sr = Number(input.value);
-	
-	save_players_list();
-	redraw_teams();
-}
-
-function cancel_player_edit() {
-	if (current_player_edit == "") {
-		return;
-	}
-	var player_struct = find_player_by_id(current_player_edit);
-
-	var input = document.getElementById("sr_edit_"+current_player_edit);
-	input.value = player_struct.sr;
-	input.style.display = "none";
-	
-	var display = document.getElementById("sr_display_"+current_player_edit);
-	display.style.display = "inline";
-	
-	input = document.getElementById("name_edit_"+current_player_edit);
-	input.value = player_struct.display_name;
-	input.style.display = "none";
-	
-	var display = document.getElementById("name_display_"+current_player_edit);
-	display.style.display = "inline";
-	
-	current_player_edit = "";
-}*/
-
 function export_lobby() {
-	/*var export_struct = {
-		format_version: 1,
-		players: lobby
-		};
-	var export_str = JSON.stringify(export_struct);*/
-	
-	//alert(export_str);
 	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
 	document.getElementById("dlg_title").innerHTML = "Player list export";
@@ -1233,7 +1070,6 @@ function export_lobby() {
 	document.getElementById("dlg_operation").innerHTML = "Export";
 	document.getElementById("dlg_format_value").value = "json";
 	document.getElementById("dlg_format_value").onchange = function(event){change_export_format();};
-	//document.getElementById("dlg_textarea").value = export_str;
 	document.getElementById("dlg_textarea").style.display = "inline";
 	document.getElementById("dlg_textarea").select();
 	document.getElementById("dlg_textarea").focus();
@@ -1259,7 +1095,6 @@ function import_lobby_dlg() {
 }
 
 function import_lobby() {
-	//var import_str = prompt("Enter import string");
 	var import_str = document.getElementById("dlg_textarea").value;
 
 	if (import_str !== null && import_str != "") {
@@ -1482,65 +1317,6 @@ function balance_adjust_sr_change() {
 	localStorage.setItem( "balance_adjust_sr", adjust_enabled);
 }
 
-//deprecated
-/*
-function edit_player_class(ev) {
-	if ( ev.button == 2) {
-		// edit player name
-		ev.preventDefault();
-		
-		cancel_player_edit();
-		
-		var player_id = ev.currentTarget.parentElement.id;
-		var player_struct = find_player_by_id(player_id);
-		
-		init_popup_dlg();
-		document.getElementById("popup_dlg").style.display = "block";
-		document.getElementById("dlg_title").innerHTML = player_struct.display_name;
-		document.getElementById("dlg_textarea").style.display = "none";
-		document.getElementById("dlg_class_select").style.display = "block";
-		
-		if ( player_struct.top_classes !== undefined ) {
-			if ( player_struct.top_classes.length > 0 ) {
-				document.getElementById("dlg_main_class").value = player_struct.top_classes[0];
-			}
-			
-			if ( player_struct.top_classes.length > 1 ) {
-				document.getElementById("dlg_secondary_class").value = player_struct.top_classes[1];
-			} else {
-				document.getElementById("dlg_secondary_class").value = "";
-			}
-		}
-		
-		document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player_class();};
-		
-		current_player_edit = player_id;
-		
-		// disable context menu
-		return false;
-	}
-}
-
-function change_player_class() {
-	if (current_player_edit == "") {
-		return;
-	}
-	
-	var top_classes = [];
-	top_classes.push( document.getElementById("dlg_main_class").value );
-	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
-		top_classes.push( document.getElementById("dlg_secondary_class").value );
-	}
-	
-	var player_struct = find_player_by_id(current_player_edit);
-	player_struct.top_classes = top_classes;
-	
-	current_player_edit = "";
-	
-	redraw_teams();
-}
-*/
-
 function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_import_export_format").style.display = "none";
@@ -1684,7 +1460,6 @@ function restore_team( team, team_name ) {
 		for ( var i in saved_team ) {
 			team.push( saved_team[i] );
 		}
-		//sort_team(lobby, 'display_name');
 		
 		// delete deprecated fields, add new fields
 		for (var i=0; i<team.length; i++) {
@@ -1975,61 +1750,12 @@ Region
 restore_team( lobby, "" );
 restore_team( team1, "_team1" );
 restore_team( team2, "_team2" );
-
-var team_size_str = localStorage.getItem("team_size");
-if ( team_size_str != null ) {
-	team_size = Number(team_size_str);
-}
-
-document.getElementById("team_size").value = team_size;
-
-var region_str = localStorage.getItem("region");
-if ( region_str != null ) {
-	region = region_str;
-}
-
-document.getElementById("region").value = region;
-
 redraw_teams();
-
-// restore balance settings
-/*
-if( localStorage.getItem("balance_adjust_sr") !== null ) {
-	document.getElementById("balance_adjust_sr").checked = (localStorage.getItem("balance_adjust_sr") == 'true');
-	balance_adjust_sr_change();
-}
-
-var balance_settings = [
-	"balance_adjust_sr_offence",
-	"balance_adjust_sr_tank",
-	"balance_adjust_sr_support",
-	"balance_adjust_sr_defence" 
-	];
-
-for ( i in balance_settings ) {
-	if( localStorage.getItem(balance_settings[i]) !== null ) {
-		document.getElementById(balance_settings[i]).value = localStorage.getItem(balance_settings[i]);
-	}
-}
-
-if( localStorage.getItem("balance_require_all_class") !== null ) {
-	document.getElementById("balance_require_all_class").checked = (localStorage.getItem("balance_require_all_class") == 'true');
-}
-
-// restore update settings
-if( localStorage.getItem("update_class") !== null ) {
-	document.getElementById("update_class").checked = (localStorage.getItem("update_class") == 'true');
-}
-if( localStorage.getItem("update_sr") !== null ) {
-	document.getElementById("update_sr").checked = (localStorage.getItem("update_sr") == 'true');
-}
-if( localStorage.getItem("update_edited_fields") !== null ) {
-	document.getElementById("update_edited_fields").checked = (localStorage.getItem("update_edited_fields") == 'true');
-}
-*/
 
 // restore settings and team names
 var settings_list = [
+	"team_size",
+	"region",
 	"team1_name",
 	"team2_name",
 	"balance_adjust_sr",
