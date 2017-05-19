@@ -488,6 +488,13 @@ function lobby_filter_change() {
 	}
 }
 
+function new_player_keyup(ev) {
+	ev.preventDefault();
+    if (ev.keyCode == 13) { //enter pressed
+        add_player_click();
+    }
+}
+
 
 /*
 *		Player stats functions
@@ -1543,7 +1550,7 @@ Region
 <br/>
 
 
-<input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value="" onchange="add_player_click();"/> 
+<input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value="" onkeyup="new_player_keyup(event);"/> 
 <button onclick="add_player_click();" id="add_btn" >add player</button> to 
 
 <input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_lobby" value="lobby">
