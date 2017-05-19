@@ -13,8 +13,10 @@ Tool for balancing teams in Overwatch custom games.
   * Adjustable team size (3x3, 6x6 or any custom size);
   * Player nickname, SR and class can be edited manually;
   * Stats can be updated for all players in one click;
-    * Options for update only selected fields or exclude manually edited fields;
+    * Options for update only selected fields and exclude manually edited fields;
+  * Region selection for stats;
   * All added players and settings automatically saved in browser storage;
   * Player list import and export in JSON and plain text formats;
   * Team balancer can take into account player's classes/roles to prevent undesirable compositions (like 5 supports in one team);
-  * Options to tweak value of different classes to account different gameplay impact.
+  * Options to tweak value of different classes to account different gameplay impact;
+  * Team names are editable.
