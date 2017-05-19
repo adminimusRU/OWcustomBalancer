@@ -1495,7 +1495,7 @@ function create_random_player( id ) {
 		"support"
 		];
 	var top_classes = [];
-	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 ) );
+	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 )[0] );
 	top_classes.push( class_names[ Math.round(Math.random()*2) ] );
 	return {
 			id: "player"+id+"#1234",
