@@ -1072,8 +1072,8 @@ function check_balance_restrictions( temp_team1 ) {
 	return true;
 }
 
-function generate_team_combination(num, last) {
-	if (num == team_size) {
+function generate_team_combination(last) {
+	if (current_team_combination.length == team_size) {
 		// composition is ready, store to list
 		var new_composition_players = current_team_combination.slice();
 		var composition_sr = calculate_team_sr(new_composition_players, true);
@@ -1094,9 +1094,9 @@ function generate_team_combination(num, last) {
 	}
 	
 	for (var i=last; i<active_players.length; i++) {
-			current_team_combination.push( active_players[i] );
-			generate_team_combination(num+1, i+1);
-			current_team_combination.pop();
+		current_team_combination.push( active_players[i] );
+		generate_team_combination(i+1);
+		current_team_combination.pop();
 	}
 }
 
@@ -1115,7 +1115,7 @@ function balance_teams() {
 	current_team_combination.splice( 0, current_team_combination.length );
 	balance_team_combinations.splice( 0, balance_team_combinations.length );
 	
-	generate_team_combination(0, 0);
+	generate_team_combination(0);
 	
 	if( best_sr_diff_index >= 0 ) {
 		team1.splice( 0, team1.length );
@@ -1138,9 +1138,7 @@ function balance_teams() {
 	
 	// balance debug
 	/*var res = "";
-	balance_team_combinations.sort(function(comb1, comb2){
-			return comb1.sr_diff-comb2.sr_diff;
-		});
+	//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
 	for (var i=0; i<balance_team_combinations.length; i++ ) {
 		res = res + i + " : ";
 		for (var p=0; p<balance_team_combinations[i].players.length; p++) {
@@ -1511,19 +1509,25 @@ function create_random_player( id ) {
 
 function fill_test_teams() {
 	// fill teams with ramdom players
-	var new_player;
-	for( var i=1; i<=team_size; i++ ) {
-		new_player = create_random_player(i);
-		lobby.push( new_player );
+	var number_to_add_str = prompt("Enter number of players to generate", 1);
+
+	if (number_to_add_str === null) {
+		return;
+	}
+	var number_to_add = Number(number_to_add_str);
+	if( Number.isNaN(number_to_add) ) {
+		return;
+	}
+	if( ! Number.isInteger(number_to_add) ) {
+		return;
+	}
+	
+	if( number_to_add > 10000 ) {
+		return;
 	}
 
-	for( var i=team_size+1; i<=team_size*2; i++ ) {
-		new_player = create_random_player(i);
-		lobby.push( new_player );
-	}
-
-	for( var i=team_size*2+1; i<=team_size*3; i++ ) {
-		new_player = create_random_player(i);
+	for( var i=1; i<=number_to_add; i++ ) {
+		var new_player = create_random_player(i);
 		lobby.push( new_player );
 	}
 
