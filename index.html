@@ -61,7 +61,15 @@ body {
 
 .player-item {
 	background-color: white;
+	cursor: grab;
+}
+
+.empty-player {
 	cursor: default;
+}
+
+.player-item:active {
+	cursor: grabbing;
 }
 
 .player-icon {
@@ -377,6 +385,7 @@ function draw_player( player_struct, team_id ) {
 	var sr_text = player_struct.sr;
 	if( player_struct.empty ) {
 		sr_text = '\u00A0';
+		new_player_item.classList.add("empty-player");
 	}
 	text_node = document.createTextNode( sr_text );
 	sr_display.appendChild(text_node);
@@ -707,10 +716,13 @@ function player_item_onclick(item, team_id) {
 
 function player_drag(ev) {
 	 ev.dataTransfer.setData("text/plain", ev.currentTarget.id);
+	 ev.dataTransfer.effectAllowed = "move";
+	 ev.dropEffect = "move";
 }
 
 function player_allowDrop(ev) {
     ev.preventDefault();
+	ev.dataTransfer.dropEffect = "move";
 }
 
 function player_drop(ev) {
