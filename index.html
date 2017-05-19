@@ -318,9 +318,348 @@ var hero_classes = {
 	reinhardt:	"tank",
 };
 
-
+// stats updater variables
 var players_for_update = [];
 var total_playets_for_update = 0;
+
+/*
+*		UI functions
+*/
+
+function draw_player( player_struct, team_id ) {
+	var text_node;
+	var br_node;
+	
+	var team_list = document.getElementById(team_id);
+	
+	var new_player_item_row = document.createElement("div");
+	new_player_item_row.className = "row ";
+	
+	var new_player_item = document.createElement("div");
+	new_player_item.className = "cell player-item";
+	new_player_item.id = player_struct.id;
+	new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
+	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
+	if( ! player_struct.empty) {
+		new_player_item.draggable = true;
+	}
+	new_player_item.ondragstart = function(event){player_drag(event);};
+	new_player_item.ondrop = function(event){player_drop(event);};
+	new_player_item.ondragover = function(event){player_allowDrop(event);};
+	new_player_item.ondblclick = function(event){player_dblClick(event);};
+	new_player_item.oncontextmenu = function(event){player_contextmenu(event);};
+	new_player_item_row.appendChild(new_player_item);
+	
+	// rank icon
+	var player_icon = document.createElement("div");
+	player_icon.className = "player-icon";
+	
+	var icon_image = document.createElement("div");
+	icon_image.className = "icon-image";
+	
+	var img_node = document.createElement("img");
+	img_node.className = "rank-icon";
+	var rank_name = get_rank_name(player_struct.sr);
+	img_node.src = "rank_icons/"+rank_name+"_small.png";
+	img_node.title = rank_name;
+	icon_image.appendChild(img_node);
+	player_icon.appendChild(icon_image);
+	
+	br_node = document.createElement("br");
+	player_icon.appendChild(br_node);
+	
+	// SR value
+	var icon_sr = document.createElement("div");
+	icon_sr.className = "icon-sr";
+	
+	var sr_display = document.createElement("span");
+	sr_display.id = "sr_display_"+player_struct.id;
+	var sr_text = player_struct.sr;
+	if( player_struct.empty ) {
+		sr_text = '\u00A0';
+	}
+	text_node = document.createTextNode( sr_text );
+	sr_display.appendChild(text_node);
+	sr_display.appendChild(text_node);
+	icon_sr.appendChild(sr_display);
+	
+	player_icon.appendChild(icon_sr);
+	
+	new_player_item.appendChild(player_icon);
+	
+	// space after rank icon
+	text_node = document.createTextNode("\u00A0");
+	new_player_item.appendChild(text_node)
+	
+	// player name
+	var player_name = document.createElement("div");
+	player_name.className = "player-name";
+	
+	var name_display = document.createElement("span");
+	name_display.id = "name_display_"+player_struct.id;
+	text_node = document.createTextNode(player_struct.display_name);
+	name_display.appendChild(text_node);
+	player_name.appendChild(name_display);
+	
+	new_player_item.appendChild(player_name);
+	
+	// class icons
+	if ( player_struct.top_classes !== undefined ) {
+		for(var i=0; i<player_struct.top_classes.length; i++) {
+			var class_icon = document.createElement("img");
+			class_icon.className = "class-icon";
+			if( i != 0 )  {
+				class_icon.className += " secondary-class";
+			}
+			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
+			class_icon.title = player_struct.top_classes[i];
+			new_player_item.appendChild(class_icon);
+		}
+	}
+	
+	team_list.appendChild(new_player_item_row);
+}
+
+function redraw_teams() {
+	document.getElementById("team1").innerHTML = "";
+	document.getElementById("team2").innerHTML = "";
+	document.getElementById("lobby").innerHTML = "";
+
+	for( var i=0; i<team1.length; i++) {
+		draw_player( team1[i], "team1" );
+	}
+	// add empty players up to max team size
+	for( i=team1.length; i<team_size; i++) {
+		draw_player(  create_empty_player(), "team1" );
+	}
+
+	for( var i=0; i<team2.length; i++) {
+		draw_player( team2[i], "team2" );
+	}
+	for( i=team2.length; i<team_size; i++) {
+		draw_player( create_empty_player(), "team2" );
+	}
+	
+	for( var i=0; i<lobby.length; i++) {
+		draw_player( lobby[i], "lobby" );
+	}
+	for( i=lobby.length; i<team_size; i++) {
+		draw_player( create_empty_player(), "lobby" );
+	}
+	
+	document.getElementById("lobby_count").innerHTML = lobby.length;
+		
+	update_teams_sr();
+	
+	save_players_list();
+}
+
+function collapse_group( header ) {
+	header.classList.toggle("header-expanded");
+	var group_expanded = header.classList.contains("header-expanded");
+	
+	var header_icon = header.getElementsByClassName("header-icon")[0];
+	if (group_expanded) {
+		header_icon.innerHTML = "<span>-</span>";
+	} else {
+		header_icon.innerHTML = "<span>+</span>";
+	}
+		
+	var group_content = header.parentElement.getElementsByClassName("group-content");
+	for (var i=0; i<group_content.length; i++ ) {
+		group_content[i].classList.toggle("group-collapsed");
+	}
+}
+
+function lobby_filter_change() {
+	var filter_value = document.getElementById("lobby_filter").value.toLowerCase();
+	if (filter_value != "") {
+		document.getElementById("lobby_filter").classList.add("filter-active");
+	} else {
+		document.getElementById("lobby_filter").classList.remove("filter-active");
+	}
+	
+	for( var i=0; i<lobby.length; i++) {
+		if ( filter_value == "" || lobby[i].display_name.toLowerCase().includes( filter_value ) || lobby[i].id.toLowerCase().includes( filter_value ) ) {
+			document.getElementById(lobby[i].id).parentElement.style.display = "table-row";
+		} else {
+			document.getElementById(lobby[i].id).parentElement.style.display = "none";
+		}
+	}
+}
+
+
+/*
+*		Player stats functions
+*/
+
+function calc_player_sr( player ) {
+	var player_sr = player.sr;
+	if (document.getElementById("balance_adjust_sr").checked) {
+		if ( player.top_classes !== undefined ) {
+			var top_class = player.top_classes[0];
+			if( top_class !== undefined ) {
+				player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
+			}
+		}
+	}
+	return player_sr;
+}
+
+function get_rank_name( sr ) {
+	if (sr == 0) {
+		return "unranked"
+	} else if ( sr < 1500) {
+		return "bronze";
+	} else if ( sr < 2000 ) {
+		return "silver";
+	} else if ( sr < 2500 ) {
+		return "gold";
+	} else if ( sr < 3000 ) {
+		return "platinum";
+	} else if ( sr < 3500 ) {
+		return "diamond";
+	} else if ( sr < 4000 ) {
+		return "master";
+	} else if ( sr < 5000 ) {
+		return "grandmaster";
+	} else {
+		return "unranked";
+	}
+}
+
+// returns top 2 hero classes
+function calculate_top_classes( hero_playtime ) {
+	var class_playtime = {
+		offence: 0,
+		defence: 0,
+		tank: 0,
+		support: 0
+		};
+	
+	var total_playtime = 0;
+	for (var hero_name in hero_playtime ) {
+		var hero_class = hero_classes[hero_name];
+		class_playtime[hero_class] += hero_playtime[hero_name];
+		total_playtime += hero_playtime[hero_name];
+	}
+	
+	var class_playtime_arr = Object.entries(class_playtime);
+	class_playtime_arr.sort( function(item1, item2){
+			return item2[1]-item1[1];	
+		});
+	
+	var top_classes = [];
+	var top_class = class_playtime_arr.shift();
+	if( top_class !== undefined ) {
+		top_classes.push( top_class[0] );
+	}
+	top_class = class_playtime_arr.shift();
+	if( top_class !== undefined ) {
+		if( Number(top_class[1])/total_playtime >= 0.25 ) {
+			top_classes.push( top_class[0] );
+		}
+	}
+	
+	return top_classes;
+}
+
+function calculate_team_sr( team, use_balance_options=false ) {
+	var team_sr = 0;
+	if (team.length > 0) {
+		for( var i=0; i<team.length; i++) {
+			var player_sr = team[i].sr;
+			if (use_balance_options) {
+				player_sr = calc_player_sr( team[i] );
+			}
+			team_sr += player_sr;
+		}
+		team_sr = Math.round(team_sr / team.length);
+	}
+	return team_sr;
+}
+
+function update_next_player_stats( ) {
+	if ( players_for_update.length > 0 ) {
+		var current_player = players_for_update[0];
+		document.getElementById("update_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
+		
+		var xhttp = new XMLHttpRequest();
+		
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 ) {
+				var player =  players_for_update.shift();
+				var cancel_update = false;
+				
+				if ( this.status == 200) {
+					var stats_obj = JSON.parse(this.responseText);
+					if ( stats_obj[region] !== null ) {
+						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+						
+						if( document.getElementById("update_sr").checked ) {
+							// check if SR was manually edited and update option checked
+							if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
+								player.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
+							}
+						}
+						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
+						if( document.getElementById("update_class").checked ) {
+							// check if class was manually edited and update option checked
+							if ( (player.ce !== true) || document.getElementById("update_edited_fields").checked ) {
+								player.top_classes = top_classes;
+							}
+						}
+					} else {
+						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
+							cancel_update = true;
+						}
+					}
+				}
+				
+				if( cancel_update) {
+					document.getElementById("update_stats_btn").disabled = false;
+					document.getElementById("dlg_update_player_stats").disabled = false;
+					document.getElementById("update_stats_btn").value = "↻ Update stats";
+					redraw_teams();
+				} else {
+					setTimeout( update_next_player_stats, min_api_request_interval );
+				}
+			}
+		};
+		
+		xhttp.open("GET", "https://owapi.net/api/v3/u/"+current_player.id+"/blob", true);
+		xhttp.send();
+	} else {
+		// all players updated
+		alert("All stats updated");
+		document.getElementById("update_stats_btn").disabled = false;
+		document.getElementById("dlg_update_player_stats").disabled = false;
+		document.getElementById("update_stats_btn").value = "↻ Update stats";
+		redraw_teams();
+		fill_player_stats_dlg();
+	}
+}
+
+function update_all_stats() {
+	players_for_update.splice( 0, players_for_update.length );
+	players_for_update = lobby.concat(team1).concat(team2);
+	total_playets_for_update = players_for_update.length;
+	
+	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
+	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
+		return;
+	};
+
+	document.getElementById("update_stats_btn").disabled = true;
+	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	
+	update_next_player_stats();
+}
+
+
+/*
+*		Player selection and transfer functions
+*/
 
 function player_item_onclick(item, team_id) {
 	var prev_selected_id = "";
@@ -527,141 +866,6 @@ function player_dblClick(ev) {
 	redraw_teams();
 }
 
-function draw_player( player_struct, team_id ) {
-	var text_node;
-	var br_node;
-	
-	var team_list = document.getElementById(team_id);
-	
-	var new_player_item_row = document.createElement("div");
-	new_player_item_row.className = "row ";
-	
-	var new_player_item = document.createElement("div");
-	new_player_item.className = "cell player-item";
-	new_player_item.id = player_struct.id;
-	new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
-	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
-	if( ! player_struct.empty) {
-		new_player_item.draggable = true;
-	}
-	new_player_item.ondragstart = function(event){player_drag(event);};
-	new_player_item.ondrop = function(event){player_drop(event);};
-	new_player_item.ondragover = function(event){player_allowDrop(event);};
-	new_player_item.ondblclick = function(event){player_dblClick(event);};
-	new_player_item.oncontextmenu = function(event){player_contextmenu(event);};
-	new_player_item_row.appendChild(new_player_item);
-	
-	// rank icon
-	var player_icon = document.createElement("div");
-	player_icon.className = "player-icon";
-	
-	var icon_image = document.createElement("div");
-	icon_image.className = "icon-image";
-	
-	var img_node = document.createElement("img");
-	img_node.className = "rank-icon";
-	var rank_name = get_rank_name(player_struct.sr);
-	img_node.src = "rank_icons/"+rank_name+"_small.png";
-	img_node.title = rank_name;
-	icon_image.appendChild(img_node);
-	player_icon.appendChild(icon_image);
-	
-	br_node = document.createElement("br");
-	player_icon.appendChild(br_node);
-	
-	// SR value
-	var icon_sr = document.createElement("div");
-	icon_sr.className = "icon-sr";
-	
-	var sr_display = document.createElement("span");
-	sr_display.id = "sr_display_"+player_struct.id;
-	var sr_text = player_struct.sr;
-	if( player_struct.empty ) {
-		sr_text = '\u00A0';
-	}
-	text_node = document.createTextNode( sr_text );
-	sr_display.appendChild(text_node);
-	sr_display.appendChild(text_node);
-	icon_sr.appendChild(sr_display);
-	
-	player_icon.appendChild(icon_sr);
-	
-	new_player_item.appendChild(player_icon);
-	
-	// space after rank icon
-	text_node = document.createTextNode("\u00A0");
-	new_player_item.appendChild(text_node)
-	
-	// player name
-	var player_name = document.createElement("div");
-	player_name.className = "player-name";
-	
-	var name_display = document.createElement("span");
-	name_display.id = "name_display_"+player_struct.id;
-	text_node = document.createTextNode(player_struct.display_name);
-	name_display.appendChild(text_node);
-	player_name.appendChild(name_display);
-	
-	new_player_item.appendChild(player_name);
-	
-	// class icons
-	if ( player_struct.top_classes !== undefined ) {
-		for(var i=0; i<player_struct.top_classes.length; i++) {
-			var class_icon = document.createElement("img");
-			class_icon.className = "class-icon";
-			if( i != 0 )  {
-				class_icon.className += " secondary-class";
-			}
-			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
-			class_icon.title = player_struct.top_classes[i];
-			new_player_item.appendChild(class_icon);
-		}
-	}
-	
-	team_list.appendChild(new_player_item_row);
-}
-
-function redraw_teams() {
-	document.getElementById("team1").innerHTML = "";
-	document.getElementById("team2").innerHTML = "";
-	document.getElementById("lobby").innerHTML = "";
-
-	for( var i=0; i<team1.length; i++) {
-		draw_player( team1[i], "team1" );
-	}
-	// add empty players up to max team size
-	for( i=team1.length; i<team_size; i++) {
-		draw_player(  create_empty_player(), "team1" );
-	}
-
-	for( var i=0; i<team2.length; i++) {
-		draw_player( team2[i], "team2" );
-	}
-	for( i=team2.length; i<team_size; i++) {
-		draw_player( create_empty_player(), "team2" );
-	}
-	
-	for( var i=0; i<lobby.length; i++) {
-		draw_player( lobby[i], "lobby" );
-	}
-	for( i=lobby.length; i<team_size; i++) {
-		draw_player( create_empty_player(), "lobby" );
-	}
-	
-	document.getElementById("lobby_count").innerHTML = lobby.length;
-		
-	update_teams_sr();
-	
-	save_players_list();
-}
-
-function save_players_list() {
-	// store players to browser local storage
-	localStorage.setItem("saved_players", JSON.stringify(lobby));
-	localStorage.setItem("saved_players_team1", JSON.stringify(team1));
-	localStorage.setItem("saved_players_team2", JSON.stringify(team2));
-}
-
 function swap_players() {
 	var player1;
 	var player1_index;
@@ -693,147 +897,20 @@ function swap_players() {
 	document.getElementById("swap_btn").disabled = true;
 }
 
-function calc_player_sr( player ) {
-	var player_sr = player.sr;
-	if (document.getElementById("balance_adjust_sr").checked) {
-		if ( player.top_classes !== undefined ) {
-			var top_class = player.top_classes[0];
-			if( top_class !== undefined ) {
-				player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
-			}
-		}
-	}
-	return player_sr;
+
+/*
+*		Team management functions
+*/
+
+function move_team_to_lobby(team) {
+	lobby = lobby.concat(team);
+	team.splice( 0, team.length );
 }
 
-function calculate_team_sr( team, use_balance_options=false ) {
-	var team_sr = 0;
-	if (team.length > 0) {
-		for( var i=0; i<team.length; i++) {
-			var player_sr = team[i].sr;
-			if (use_balance_options) {
-				player_sr = calc_player_sr( team[i] );
-			}
-			team_sr += player_sr;
-		}
-		team_sr = Math.round(team_sr / team.length);
+function clear_team( team ) {
+	if( confirm("Clear team?") ) {
+		team.splice( 0, team.length );
 	}
-	return team_sr;
-}
-
-function update_teams_sr() {
-	document.getElementById("team1_sr").innerHTML = calculate_team_sr(team1);
-	document.getElementById("team2_sr").innerHTML = calculate_team_sr(team2);
-}
-
-function get_rank_name( sr ) {
-	if (sr == 0) {
-		return "unranked"
-	} else if ( sr < 1500) {
-		return "bronze";
-	} else if ( sr < 2000 ) {
-		return "silver";
-	} else if ( sr < 2500 ) {
-		return "gold";
-	} else if ( sr < 3000 ) {
-		return "platinum";
-	} else if ( sr < 3500 ) {
-		return "diamond";
-	} else if ( sr < 4000 ) {
-		return "master";
-	} else if ( sr < 5000 ) {
-		return "grandmaster";
-	} else {
-		return "unranked";
-	}
-}
-
-function add_player_click() {
-	var player_id = document.getElementById("new_player_id").value;
-	player_id = player_id.trim().replace("#", "-");
-	player_name = player_id.slice( 0, player_id.search("-") );
-	
-	// check duplicates
-	for( var i=0; i<team1.length; i++) {
-		if( team1[i].id == player_id) {
-			alert("Player already added");
-			return;
-		}
-	}
-	for( var i=0; i<team2.length; i++) {
-		if( team2[i].id == player_id) {
-			alert("Player already added");
-			return;
-		}
-	}
-	for( var i=0; i<lobby.length; i++) {
-		if( lobby[i].id == player_id) {
-			alert("Player already added");
-			return;
-		}
-	}
-	
-	// determine team to add new player
-	var new_player_team;
-	var team_selectors = document.getElementsByName("add_team_select");
-    for (var i=0; i<team_selectors.length; i++) {
-        if (team_selectors[i].checked) {
-			if (team_selectors[i].value == "team1") {
-				new_player_team = team1;
-			} else if (team_selectors[i].value == "team2") {
-				new_player_team = team2;
-			} else if (team_selectors[i].value == "lobby") {
-				new_player_team = lobby;
-			} else { // auto team
-				if (team1.length < team_size) {
-					new_player_team = team1;
-				} else {
-					new_player_team = team2;
-				}
-			}
-		}
-	}
-	
-	// check if team has free slots
-	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
-		alert("Team is full");
-		return;
-	}
-	
-	var xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 ) {
-			if ( this.status == 200) {
-				var stats_obj = JSON.parse(this.responseText);
-				if ( stats_obj[region] !== null ) {	
-					var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
-					
-					var new_player = {
-						id: player_id,
-						display_name: player_name, 
-						sr: Number(stats_obj[region].stats.competitive.overall_stats.comprank),
-						level: stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
-						top_classes: top_classes,
-					};
-					new_player_team.push(new_player);
-					
-					document.getElementById("new_player_id").value = "";
-					
-					redraw_teams();
-				} else {
-					alert("Player has no stats in region "+region.toUpperCase());
-				}
-			} else {
-				alert("Can't get player stats ("+this.status+"), connection problem or incorrect BattleTag");
-			}
-		}
-		document.getElementById("add_btn").disabled = false;
-		document.getElementById("add_btn").innerHTML = "add player";
-	};
-	xhttp.open("GET", "https://owapi.net/api/v3/u/"+player_id+"/blob", true);
-	document.getElementById("add_btn").disabled = true;
-	document.getElementById("add_btn").innerHTML = "processing...";
-	xhttp.send();
 }
 
 function sort_team( team, sort_field = 'sr' ) {
@@ -848,65 +925,102 @@ function sort_team( team, sort_field = 'sr' ) {
 		} );
 }
 
-function clear_team( team ) {
-	if( confirm("Clear team?") ) {
-		team.splice( 0, team.length );
-	}
+function update_teams_sr() {
+	document.getElementById("team1_sr").innerHTML = calculate_team_sr(team1);
+	document.getElementById("team2_sr").innerHTML = calculate_team_sr(team2);
 }
 
-function create_empty_player() {
-	return {
-			id: "",
-			display_name: "",
-			sr: 0,
-			empty: true
-		};
+
+/*
+*		Player editing and updating
+*/
+
+function player_contextmenu(ev) {
+	ev.preventDefault();
+	
+	var player_id = ev.currentTarget.id;
+	var player_struct = find_player_by_id(player_id);
+	
+	current_player_edit = player_id;
+	
+	init_popup_dlg();
+	document.getElementById("popup_dlg").style.display = "block";
+	document.getElementById("dlg_title").innerHTML = player_struct.display_name;
+	document.getElementById("dlg_player_edit").style.display = "block";
+	document.getElementById("dlg_class_select").style.display = "block";
+	document.getElementById("dlg_update_player_stats").style.display = "block";
+	
+	fill_player_stats_dlg();
+	
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player();};
+	
+	// disable context menu
+	return false;
 }
-function create_random_player( id ) {
-	var class_names = [
-		"offence",
-		"defence",
-		"tank",
-		"support"
-		];
+
+function change_player() {
+	if (current_player_edit == "") {
+		return;
+	}
+	
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	var new_name = document.getElementById("dlg_player_display_name").value;
+	if ( player_struct.display_name != new_name ) {
+		player_struct.ne = true; // name edited
+	}
+	player_struct.display_name = new_name;
+	
+	var new_sr = Number(document.getElementById("dlg_player_sr").value);
+	if ( player_struct.sr != new_sr ) {
+		player_struct.se = true; // sr edited
+	}
+	player_struct.sr = new_sr;
+	
 	var top_classes = [];
-	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 ) );
-	top_classes.push( class_names[ Math.round(Math.random()*2) ] );
-	return {
-			id: "player"+id+"#1234",
-			display_name: "player"+id,
-			sr: Math.round(Math.random()*5000),
-			level: Math.round(Math.random()*2000),
-			empty: false,
-			top_classes: top_classes
-		};
-}
-
-function move_team_to_lobby(team) {
-	lobby = lobby.concat(team);
-	team.splice( 0, team.length );
-}
-
-function fill_test_teams() {
-	// fill teams with ramdom players
-	var new_player;
-	for( var i=1; i<=team_size; i++ ) {
-		new_player = create_random_player(i);
-		lobby.push( new_player );
+	top_classes.push( document.getElementById("dlg_main_class").value );
+	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
+		top_classes.push( document.getElementById("dlg_secondary_class").value );
 	}
-
-	for( var i=team_size+1; i<=team_size*2; i++ ) {
-		new_player = create_random_player(i);
-		lobby.push( new_player );
+	if ( player_struct.top_classes.length != top_classes.length ) {
+		player_struct.ce = true; // class edited
+	} else {
+		for (i in top_classes) {
+			if ( top_classes[i] != player_struct.top_classes[i] ) {
+				player_struct.ce = true;
+				break;
+			}
+		}
+	
 	}
-
-	for( var i=team_size*2+1; i<=team_size*3; i++ ) {
-		new_player = create_random_player(i);
-		lobby.push( new_player );
-	}
-
+	player_struct.top_classes = top_classes;
+	
+	current_player_edit = "";
+	
 	redraw_teams();
 }
+
+function update_current_player_stats() {
+	if (current_player_edit == "") {
+		return;
+	}
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	players_for_update.splice( 0, players_for_update.length );
+	players_for_update.push( player_struct );
+	total_playets_for_update = players_for_update.length;
+	
+	document.getElementById("update_stats_btn").disabled = true;
+	document.getElementById("dlg_update_player_stats").disabled = true;
+	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	
+	update_next_player_stats();
+}
+
+
+/*
+*		Team balancer functions
+*/
 
 function check_balance_restrictions( temp_team1 ) {
 	var temp_team2 = [];
@@ -1032,34 +1146,97 @@ function balance_teams() {
 	document.getElementById("test_result").innerHTML = res;*/
 }	
 
-function update_team_size( new_value ) {
-	team_size = Number(new_value);
-	redraw_teams();
-	localStorage.setItem("team_size", team_size);
-}
 
-function update_region( new_value ) {
-	region = new_value;
-	localStorage.setItem("region", region);
-}
+/*
+*		Import / export functions 
+*/
 
-function find_player_by_id(player_id) {
+function add_player_click() {
+	var player_id = document.getElementById("new_player_id").value;
+	player_id = player_id.trim().replace("#", "-");
+	player_name = player_id.slice( 0, player_id.search("-") );
+	
+	// check duplicates
 	for( var i=0; i<team1.length; i++) {
-		if ( player_id == team1[i].id) {
-			return team1[i];
+		if( team1[i].id == player_id) {
+			alert("Player already added");
+			return;
 		}
 	}
 	for( var i=0; i<team2.length; i++) {
-		if ( player_id == team2[i].id) {
-			return team2[i];
+		if( team2[i].id == player_id) {
+			alert("Player already added");
+			return;
 		}
 	}
 	for( var i=0; i<lobby.length; i++) {
-		if ( player_id == lobby[i].id) {
-			return lobby[i];
+		if( lobby[i].id == player_id) {
+			alert("Player already added");
+			return;
 		}
 	}
-	return undefined;
+	
+	// determine team to add new player
+	var new_player_team;
+	var team_selectors = document.getElementsByName("add_team_select");
+    for (var i=0; i<team_selectors.length; i++) {
+        if (team_selectors[i].checked) {
+			if (team_selectors[i].value == "team1") {
+				new_player_team = team1;
+			} else if (team_selectors[i].value == "team2") {
+				new_player_team = team2;
+			} else if (team_selectors[i].value == "lobby") {
+				new_player_team = lobby;
+			} else { // auto team
+				if (team1.length < team_size) {
+					new_player_team = team1;
+				} else {
+					new_player_team = team2;
+				}
+			}
+		}
+	}
+	
+	// check if team has free slots
+	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
+		alert("Team is full");
+		return;
+	}
+	
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 ) {
+			if ( this.status == 200) {
+				var stats_obj = JSON.parse(this.responseText);
+				if ( stats_obj[region] !== null ) {	
+					var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+					
+					var new_player = {
+						id: player_id,
+						display_name: player_name, 
+						sr: Number(stats_obj[region].stats.competitive.overall_stats.comprank),
+						level: stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
+						top_classes: top_classes,
+					};
+					new_player_team.push(new_player);
+					
+					document.getElementById("new_player_id").value = "";
+					
+					redraw_teams();
+				} else {
+					alert("Player has no stats in region "+region.toUpperCase());
+				}
+			} else {
+				alert("Can't get player stats ("+this.status+"), connection problem or incorrect BattleTag");
+			}
+		}
+		document.getElementById("add_btn").disabled = false;
+		document.getElementById("add_btn").innerHTML = "add player";
+	};
+	xhttp.open("GET", "https://owapi.net/api/v3/u/"+player_id+"/blob", true);
+	document.getElementById("add_btn").disabled = true;
+	document.getElementById("add_btn").innerHTML = "processing...";
+	xhttp.send();
 }
 
 function export_lobby() {
@@ -1149,138 +1326,45 @@ function import_lobby() {
 	}
 }
 
-// returns top 2 hero classes
-function calculate_top_classes( hero_playtime ) {
-	var class_playtime = {
-		offence: 0,
-		defence: 0,
-		tank: 0,
-		support: 0
-		};
-	
-	var total_playtime = 0;
-	for (var hero_name in hero_playtime ) {
-		var hero_class = hero_classes[hero_name];
-		class_playtime[hero_class] += hero_playtime[hero_name];
-		total_playtime += hero_playtime[hero_name];
-	}
-	
-	var class_playtime_arr = Object.entries(class_playtime);
-	class_playtime_arr.sort( function(item1, item2){
-			return item2[1]-item1[1];	
-		});
-	
-	var top_classes = [];
-	var top_class = class_playtime_arr.shift();
-	if( top_class !== undefined ) {
-		top_classes.push( top_class[0] );
-	}
-	top_class = class_playtime_arr.shift();
-	if( top_class !== undefined ) {
-		if( Number(top_class[1])/total_playtime >= 0.25 ) {
-			top_classes.push( top_class[0] );
+function change_export_format() {
+	var export_str = "";
+	if ( document.getElementById("dlg_format_value").value == "json" ) {
+		var export_struct = {
+			format_version: 1,
+			players: lobby
+			};
+		export_str = JSON.stringify(export_struct);
+	} else if ( document.getElementById("dlg_format_value").value == "battletags" ) {
+		for( i in lobby) {
+			var player_id = lobby[i].id.trim().replace("-", "#");
+			export_str += player_id + "\n";
 		}
 	}
 	
-	return top_classes;
+	document.getElementById("dlg_textarea").value = export_str.trim();
 }
 
-function update_next_player_stats( ) {
-	if ( players_for_update.length > 0 ) {
-		var current_player = players_for_update[0];
-		document.getElementById("update_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
-		
-		var xhttp = new XMLHttpRequest();
-		
-		xhttp.onreadystatechange = function() {
-			if (this.readyState == 4 ) {
-				var player =  players_for_update.shift();
-				var cancel_update = false;
-				
-				if ( this.status == 200) {
-					var stats_obj = JSON.parse(this.responseText);
-					if ( stats_obj[region] !== null ) {
-						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
-						
-						if( document.getElementById("update_sr").checked ) {
-							// check if SR was manually edited and update option checked
-							if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
-								player.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
-							}
-						}
-						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
-						if( document.getElementById("update_class").checked ) {
-							// check if class was manually edited and update option checked
-							if ( (player.ce !== true) || document.getElementById("update_edited_fields").checked ) {
-								player.top_classes = top_classes;
-							}
-						}
-					} else {
-						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
-							cancel_update = true;
-						}
-					}
-				}
-				
-				if( cancel_update) {
-					document.getElementById("update_stats_btn").disabled = false;
-					document.getElementById("dlg_update_player_stats").disabled = false;
-					document.getElementById("update_stats_btn").value = "↻ Update stats";
-					redraw_teams();
-				} else {
-					setTimeout( update_next_player_stats, min_api_request_interval );
-				}
-			}
-		};
-		
-		xhttp.open("GET", "https://owapi.net/api/v3/u/"+current_player.id+"/blob", true);
-		xhttp.send();
-	} else {
-		// all players updated
-		alert("All stats updated");
-		document.getElementById("update_stats_btn").disabled = false;
-		document.getElementById("dlg_update_player_stats").disabled = false;
-		document.getElementById("update_stats_btn").value = "↻ Update stats";
-		redraw_teams();
-		fill_player_stats_dlg();
-	}
+
+/*
+*		Settings functions
+*/
+
+function save_players_list() {
+	// store players to browser local storage
+	localStorage.setItem("saved_players", JSON.stringify(lobby));
+	localStorage.setItem("saved_players_team1", JSON.stringify(team1));
+	localStorage.setItem("saved_players_team2", JSON.stringify(team2));
 }
 
-function update_all_stats() {
-	players_for_update.splice( 0, players_for_update.length );
-	players_for_update = lobby.concat(team1).concat(team2);
-	total_playets_for_update = players_for_update.length;
-	
-	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
-	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
-		return;
-	};
-
-	document.getElementById("update_stats_btn").disabled = true;
-	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
-	
-	update_next_player_stats();
+function update_team_size( new_value ) {
+	team_size = Number(new_value);
+	redraw_teams();
+	localStorage.setItem("team_size", team_size);
 }
 
-function close_dialog() {
-	document.getElementById("popup_dlg").style.display = "none";
-}
-
-function lobby_filter_change() {
-	var filter_value = document.getElementById("lobby_filter").value.toLowerCase();
-	if (filter_value != "") {
-		document.getElementById("lobby_filter").classList.add("filter-active");
-	} else {
-		document.getElementById("lobby_filter").classList.remove("filter-active");
-	}
-	
-	for( var i=0; i<lobby.length; i++) {
-		if ( filter_value == "" || lobby[i].display_name.toLowerCase().includes( filter_value ) || lobby[i].id.toLowerCase().includes( filter_value ) ) {
-			document.getElementById(lobby[i].id).parentElement.style.display = "table-row";
-		} else {
-			document.getElementById(lobby[i].id).parentElement.style.display = "none";
-		}
-	}
+function update_region( new_value ) {
+	region = new_value;
+	localStorage.setItem("region", region);
 }
 
 function save_settings_value( element ) {
@@ -1288,23 +1372,6 @@ function save_settings_value( element ) {
 		localStorage.setItem(element.id, element.checked);
 	} else {
 		localStorage.setItem(element.id, element.value);
-	}
-}
-
-function collapse_group( header ) {
-	header.classList.toggle("header-expanded");
-	var group_expanded = header.classList.contains("header-expanded");
-	
-	var header_icon = header.getElementsByClassName("header-icon")[0];
-	if (group_expanded) {
-		header_icon.innerHTML = "<span>-</span>";
-	} else {
-		header_icon.innerHTML = "<span>+</span>";
-	}
-		
-	var group_content = header.parentElement.getElementsByClassName("group-content");
-	for (var i=0; i<group_content.length; i++ ) {
-		group_content[i].classList.toggle("group-collapsed");
 	}
 }
 
@@ -1317,6 +1384,31 @@ function balance_adjust_sr_change() {
 	localStorage.setItem( "balance_adjust_sr", adjust_enabled);
 }
 
+function restore_team( team, team_name ) {
+	var saved_players_json = localStorage.getItem("saved_players"+team_name);
+	if ( saved_players_json != null ) {
+		var saved_team = JSON.parse(saved_players_json);
+		for ( var i in saved_team ) {
+			team.push( saved_team[i] );
+		}
+		
+		// delete deprecated fields, add new fields
+		for (var i=0; i<team.length; i++) {
+			delete team[i].current_sr;
+			delete team[i].max_sr;
+			
+			if ( ! Array.isArray(team[i].top_classes) ) {
+				team[i].top_classes = [];
+			}
+		}
+	}
+}
+
+
+/*
+*		Popup dialog
+*/
+
 function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_import_export_format").style.display = "none";
@@ -1326,6 +1418,10 @@ function init_popup_dlg() {
 	document.getElementById("dlg_class_select").style.display = "none";
 	document.getElementById("dlg_update_player_stats").style.display = "none";
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
+}
+
+function close_dialog() {
+	document.getElementById("popup_dlg").style.display = "none";
 }
 
 function fill_player_stats_dlg() {
@@ -1353,124 +1449,78 @@ function fill_player_stats_dlg() {
 	}
 }
 
-function player_contextmenu(ev) {
-	ev.preventDefault();
-	
-	var player_id = ev.currentTarget.id;
-	var player_struct = find_player_by_id(player_id);
-	
-	current_player_edit = player_id;
-	
-	init_popup_dlg();
-	document.getElementById("popup_dlg").style.display = "block";
-	document.getElementById("dlg_title").innerHTML = player_struct.display_name;
-	document.getElementById("dlg_player_edit").style.display = "block";
-	document.getElementById("dlg_class_select").style.display = "block";
-	document.getElementById("dlg_update_player_stats").style.display = "block";
-	
-	fill_player_stats_dlg();
-	
-	document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player();};
-	
-	// disable context menu
-	return false;
+
+/*
+*		Other functions
+*/
+
+function find_player_by_id(player_id) {
+	for( var i=0; i<team1.length; i++) {
+		if ( player_id == team1[i].id) {
+			return team1[i];
+		}
+	}
+	for( var i=0; i<team2.length; i++) {
+		if ( player_id == team2[i].id) {
+			return team2[i];
+		}
+	}
+	for( var i=0; i<lobby.length; i++) {
+		if ( player_id == lobby[i].id) {
+			return lobby[i];
+		}
+	}
+	return undefined;
 }
 
-function change_player() {
-	if (current_player_edit == "") {
-		return;
-	}
-	
-	var player_struct = find_player_by_id(current_player_edit);
-	
-	var new_name = document.getElementById("dlg_player_display_name").value;
-	if ( player_struct.display_name != new_name ) {
-		player_struct.ne = true; // name edited
-	}
-	player_struct.display_name = new_name;
-	
-	var new_sr = Number(document.getElementById("dlg_player_sr").value);
-	if ( player_struct.sr != new_sr ) {
-		player_struct.se = true; // sr edited
-	}
-	player_struct.sr = new_sr;
-	
+function create_empty_player() {
+	return {
+			id: "",
+			display_name: "",
+			sr: 0,
+			empty: true
+		};
+}
+
+function create_random_player( id ) {
+	var class_names = [
+		"offence",
+		"defence",
+		"tank",
+		"support"
+		];
 	var top_classes = [];
-	top_classes.push( document.getElementById("dlg_main_class").value );
-	if ( document.getElementById("dlg_secondary_class").value !== "" ) {
-		top_classes.push( document.getElementById("dlg_secondary_class").value );
+	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 ) );
+	top_classes.push( class_names[ Math.round(Math.random()*2) ] );
+	return {
+			id: "player"+id+"#1234",
+			display_name: "player"+id,
+			sr: Math.round(Math.random()*5000),
+			level: Math.round(Math.random()*2000),
+			empty: false,
+			top_classes: top_classes
+		};
+}
+
+function fill_test_teams() {
+	// fill teams with ramdom players
+	var new_player;
+	for( var i=1; i<=team_size; i++ ) {
+		new_player = create_random_player(i);
+		lobby.push( new_player );
 	}
-	if ( player_struct.top_classes.length != top_classes.length ) {
-		player_struct.ce = true; // class edited
-	} else {
-		for (i in top_classes) {
-			if ( top_classes[i] != player_struct.top_classes[i] ) {
-				player_struct.ce = true;
-				break;
-			}
-		}
-	
+
+	for( var i=team_size+1; i<=team_size*2; i++ ) {
+		new_player = create_random_player(i);
+		lobby.push( new_player );
 	}
-	player_struct.top_classes = top_classes;
-	
-	current_player_edit = "";
-	
+
+	for( var i=team_size*2+1; i<=team_size*3; i++ ) {
+		new_player = create_random_player(i);
+		lobby.push( new_player );
+	}
+
 	redraw_teams();
-}
-
-function update_current_player_stats() {
-	if (current_player_edit == "") {
-		return;
-	}
-	var player_struct = find_player_by_id(current_player_edit);
-	
-	players_for_update.splice( 0, players_for_update.length );
-	players_for_update.push( player_struct );
-	total_playets_for_update = players_for_update.length;
-	
-	document.getElementById("update_stats_btn").disabled = true;
-	document.getElementById("dlg_update_player_stats").disabled = true;
-	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
-	
-	update_next_player_stats();
-}
-
-function change_export_format() {
-	var export_str = "";
-	if ( document.getElementById("dlg_format_value").value == "json" ) {
-		var export_struct = {
-			format_version: 1,
-			players: lobby
-			};
-		export_str = JSON.stringify(export_struct);
-	} else if ( document.getElementById("dlg_format_value").value == "battletags" ) {
-		for( i in lobby) {
-			var player_id = lobby[i].id.trim().replace("-", "#");
-			export_str += player_id + "\n";
-		}
-	}
-	
-	document.getElementById("dlg_textarea").value = export_str.trim();
-}
-
-function restore_team( team, team_name ) {
-	var saved_players_json = localStorage.getItem("saved_players"+team_name);
-	if ( saved_players_json != null ) {
-		var saved_team = JSON.parse(saved_players_json);
-		for ( var i in saved_team ) {
-			team.push( saved_team[i] );
-		}
-		
-		// delete deprecated fields, add new fields
-		for (var i=0; i<team.length; i++) {
-			delete team[i].current_sr;
-			delete team[i].max_sr;
-			
-			if ( ! Array.isArray(team[i].top_classes) ) {
-				team[i].top_classes = [];
-			}
-		}
-	}
 }
 
 </script>
