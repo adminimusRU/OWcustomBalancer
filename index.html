@@ -1356,14 +1356,14 @@ function save_players_list() {
 	localStorage.setItem("saved_players_team2", JSON.stringify(team2));
 }
 
-function update_team_size( new_value ) {
-	team_size = Number(new_value);
+function update_team_size() {
+	team_size = Number( document.getElementById("team_size").value );
 	redraw_teams();
 	localStorage.setItem("team_size", team_size);
 }
 
-function update_region( new_value ) {
-	region = new_value;
+function update_region() {
+	region = document.getElementById("region").value;
 	localStorage.setItem("region", region);
 }
 
@@ -1532,9 +1532,9 @@ function fill_test_teams() {
 <br/>
 
 
-Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size(this.value);"/> players. 
+Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size();"/> players. 
 Region 
-<select id="region" onchange="update_region(this.value);">
+<select id="region" onchange="update_region();">
 	<option value="eu">EU</option>
 	<option value="us">US</option>
 	<option value="kr">KR</option>
@@ -1833,6 +1833,8 @@ for ( i in settings_list ) {
 		
 	}
 }
+update_team_size();
+update_region();
 balance_adjust_sr_change();
 
 </script>
