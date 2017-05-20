@@ -218,6 +218,7 @@ textarea {
 	padding-left: 2em;
 	border-collapse: separate;
 	border-spacing: 0.5em;
+	white-space: nowrap;
 }
 
 .filter {
@@ -272,6 +273,13 @@ input.percent {
 
 input[readonly] {
 	border: none;
+}
+
+.dlg-edited-mark {
+	visibility: hidden;
+	cursor: default;
+	color: blue;
+	font-weight: bold;
 }
 
 </style>
@@ -1432,6 +1440,10 @@ function init_popup_dlg() {
 	document.getElementById("dlg_format_value").onchange = function(event){;};
 	document.getElementById("dlg_textarea").style.display = "none";
 	document.getElementById("dlg_player_edit").style.display = "none";
+	document.getElementById("dlg_player_name_edited").style.visibility = "";
+	document.getElementById("dlg_player_sr_edited").style.visibility = "";
+	document.getElementById("dlg_player_class1_edited").style.visibility = "";
+	document.getElementById("dlg_player_class2_edited").style.visibility = "";
 	document.getElementById("dlg_class_select").style.display = "none";
 	document.getElementById("dlg_update_player_stats").style.display = "none";
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
@@ -1450,7 +1462,13 @@ function fill_player_stats_dlg() {
 	
 	document.getElementById("dlg_player_id").value = player_struct.id;
 	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
+	if( player_struct.ne === true )  {
+		document.getElementById("dlg_player_name_edited").style.visibility = "visible";
+	}
 	document.getElementById("dlg_player_sr").value = player_struct.sr;
+	if( player_struct.se === true )  {
+		document.getElementById("dlg_player_sr_edited").style.visibility = "visible";
+	}
 	document.getElementById("dlg_player_level").value = player_struct.level;
 	
 	if ( player_struct.top_classes !== undefined ) {
@@ -1463,6 +1481,11 @@ function fill_player_stats_dlg() {
 		} else {
 			document.getElementById("dlg_secondary_class").value = "";
 		}
+	}
+	
+	if( player_struct.ce === true )  {
+		document.getElementById("dlg_player_class1_edited").style.visibility = "visible";
+		document.getElementById("dlg_player_class2_edited").style.visibility = "visible";
 	}
 }
 
@@ -1772,7 +1795,10 @@ Region
 				</div>
 				<div class="row">
 					<div class="cell"><label for="dlg_player_display_name">Name:</label></div>
-					<div class="cell"><input id="dlg_player_display_name" type="text"></div>
+					<div class="cell">
+						<input id="dlg_player_display_name" type="text">
+						<span id="dlg_player_name_edited" class="dlg-edited-mark" title="Name was manually edited">&#9997;</span>
+					</div>
 				</div>
 				<div class="row">
 					<div class="cell"><label for="dlg_player_level">Level:</label></div>
@@ -1780,7 +1806,10 @@ Region
 				</div>
 				<div class="row">
 					<div class="cell"><label for="dlg_player_sr">SR:</label></div>
-					<div class="cell"><input id="dlg_player_sr" type="number" min=0 max=5000></div>
+					<div class="cell">
+						<input id="dlg_player_sr" type="number" min=0 max=5000>
+						<span id="dlg_player_sr_edited" class="dlg-edited-mark" title="SR was manually edited">&#9997;</span>
+					</div>
 				</div>
 			</div>
 			<div id="dlg_class_select" class="dlg_options table">
@@ -1793,6 +1822,7 @@ Region
 							<option value="support">support</option>
 							<option value="defence">defence</option>
 						</select>
+						<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited">&#9997;</span>
 					</div>
 				</div>
 				<div class="row">
@@ -1805,6 +1835,7 @@ Region
 							<option value="support">support</option>
 							<option value="defence">defence</option>
 						</select>
+						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited">&#9997;</span>
 					</div>
 				</div>	
 			</div>
