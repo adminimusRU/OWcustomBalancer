@@ -19,4 +19,5 @@ Tool for balancing teams in Overwatch custom games.
   * Player list import and export in JSON and plain text formats;
   * Team balancer can take into account player's classes/roles to prevent undesirable compositions (like 5 supports in one team);
   * Options to tweak value of different classes to account different gameplay impact;
-  * Team names are editable.
+  * Team names are editable;
+  * Quick search for players in lobby by name or BattleTag.
