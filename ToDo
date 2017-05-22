@@ -1,2 +1,3 @@
 * Precision class balance and SR calculation
 * If adding duplicate player ask to move him to selected team instead
+* Better handling of OWAPI response (exceptions, HTTP state) + OWAPI HTTP404 no Access-Control-Allow-Origin header bug
