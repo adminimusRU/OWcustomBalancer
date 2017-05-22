@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
-<title>Custom game balancer (Overwatch)</title>
+<title>OW Custom game balancer</title>
 <meta name="description" content="Overwatch custom game balancer">
 <style>
 
@@ -1157,18 +1157,27 @@ function balance_teams() {
 	}
 	
 	// balance debug
-	/*var res = "";
-	//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
-	for (var i=0; i<balance_team_combinations.length; i++ ) {
-		res = res + i + " : ";
-		for (var p=0; p<balance_team_combinations[i].players.length; p++) {
-			res = res + balance_team_combinations[i].players[p].display_name + " ";
+	if ( document.getElementById("balance_dbg").checked ) {
+		document.getElementById("balance_dbg_test_result").style.display = "block";
+		var res = "#,";
+		for (var i=1; i<=team_size; i++ ) {
+			res += "player"+i+",";
 		}
-		res = res + " = SR " + balance_team_combinations[i].sr_diff + ", restrictions = " + balance_team_combinations[i].meets_restricion + "<br/>";
+		res += "=,SR diff,balance restrictions<br/>";
 		
+		//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
+		
+		for (var i=0; i<balance_team_combinations.length; i++ ) {
+			res += i + ",";
+			for (var p=0; p<balance_team_combinations[i].players.length; p++) {
+				res = res + balance_team_combinations[i].players[p].display_name + ",";
+			}
+			res += "=," + balance_team_combinations[i].sr_diff + "," + balance_team_combinations[i].meets_restricion + "<br/>";
+			
+		}
+		res = res +  "best # " + best_sr_diff_index;
+		document.getElementById("balance_dbg_test_result").innerHTML = res;
 	}
-	res = res +  "best : " + best_sr_diff_index;
-	document.getElementById("test_result").innerHTML = res;*/
 }	
 
 
@@ -1847,7 +1856,8 @@ Region
 	</div>
 </div>
 
-<div id="test_result"></div>
+<input type="checkbox" id="balance_dbg" style="display: none;">
+<div id="balance_dbg_test_result" style="display: none;"></div>
 
 <script>
 //restore saved players to teams
