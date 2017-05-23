@@ -153,8 +153,8 @@ body {
 	border-radius: 1em;
 	padding: 1em;
 	margin-left: 5em;
-	max-width: 20em;
-	min-width: 15em;
+	max-width: 25em;
+	min-width: 20em;
 }
 
 li {
@@ -300,8 +300,10 @@ var balance_team_combinations = [];
 var current_team_combination = [];
 var active_players = [];
 var active_players_total_sr = 0;
-var best_sr_diff = 0;
-var best_sr_diff_index = 0;
+var best_btf = 0;
+var best_btf_index = 0;
+var balance_max_sr_diff = 2000;
+var balance_exclude_classes = [ "defence" ];
 
 // hero list for calculating main classes
 var hero_classes = {
@@ -333,6 +335,12 @@ var hero_classes = {
 	roadhog:	"tank",
 	reinhardt:	"tank",
 };
+var class_names = [
+	"offence",
+	"defence",
+	"support",
+	"tank"
+];
 
 // stats updater variables
 var players_for_update = [];
@@ -1049,47 +1057,62 @@ function update_current_player_stats() {
 *		Team balancer functions
 */
 
-function check_balance_restrictions( temp_team1 ) {
+// calculates uneveness of class distribution across teams
+// return value: percent (0-100) of uneveness, 0 = even (perfect) class distribution, 100 = completely uneven class distribution
+function calc_class_unevenness( temp_team1 ) {
 	var temp_team2 = [];
 	for( i in active_players ) {
 		if ( temp_team1.indexOf(active_players[i]) == -1 ) {
 			temp_team2.push(active_players[i]);
 		}
 	}
-	if ( document.getElementById("balance_require_all_class").checked ) {
-		// check if team has at lest 2 dps, 2 tank and 2 support players
-		// fast approximation, calculating all combinations is too much
-		var team_meets_restricion = true;
-		var temp_teams = [temp_team1, temp_team2];
-		
-		for( t in temp_teams ) {
-			var team_dps = 0;
-			var team_tanks = 0;
-			var team_sups = 0;
-			
-			for( p in temp_teams[t]) {
-				for( c in temp_teams[t][p].top_classes ) {
-					switch( temp_teams[t][p].top_classes[c] ) {
-						case "offence":
-							team_dps++; break;
-						case "tank":
-							team_tanks++; break;
-						case "support":
-							team_sups++; break;
-					}
-				}
-			}
-			if( (team_dps<2) || (team_tanks<2) || (team_sups<2) ) {
-				team_meets_restricion = false;
-			}
-		};
-		
-		if( ! team_meets_restricion ) {
-			return false;
-		}
+	var temp_teams = [temp_team1, temp_team2];
+	
+	var team_class_unevenness = [];
+	var total_class_count = {};
+	for ( c in class_names ) {
+		total_class_count[class_names[c]] = 0;
 	}
 	
-	return true;
+	for( p in active_players) {
+		for( c=0; c<active_players[p].top_classes.length; c++ ) {
+			total_class_count[active_players[p].top_classes[c]] += 1 / (c+1);
+		}
+	}
+		
+	for( t in temp_teams ) {
+		var current_class_count = new Object();
+		for ( c in class_names ) {
+			current_class_count[class_names[c]] = 0;
+		}
+		
+		for( p in temp_teams[t]) {
+			for( c=0; c<temp_teams[t][p].top_classes.length; c++ ) {
+				current_class_count[temp_teams[t][p].top_classes[c]] += 1 / (c+1);
+			}
+		}
+		
+		var current_class_unevenness = Object.create( total_class_count );
+		
+		var total_class_unevenness = 0;
+		for ( var c in total_class_count ) {
+			if (balance_exclude_classes.indexOf(c) != -1 ) continue;
+		
+			if ( total_class_count[c] != 0 ) {
+				current_class_unevenness[c] = Math.abs( 100*(current_class_count[c] - (total_class_count[c]/2)) / (total_class_count[c]/2) );
+			} else {
+				current_class_unevenness[c] = 0;
+			}
+			total_class_unevenness += current_class_unevenness[c];
+		}
+		
+		var avg_class_unevenness = total_class_unevenness / Object.keys(current_class_unevenness).length;
+		team_class_unevenness.push(avg_class_unevenness);
+	};
+	
+	avg_class_unevenness = team_class_unevenness.reduce( function(total, num) {return total + num;} ) / team_class_unevenness.length;
+	
+	return Math.round( avg_class_unevenness, 1 );
 }
 
 function generate_team_combination(last) {
@@ -1097,19 +1120,25 @@ function generate_team_combination(last) {
 		// composition is ready, store to list
 		var new_composition_players = current_team_combination.slice();
 		var composition_sr = calculate_team_sr(new_composition_players, true);
-		var sr_diff = Math.abs(2*composition_sr*team_size - active_players_total_sr);
-		var meets_restricion = check_balance_restrictions(new_composition_players);
+		var sr_diff = Math.round( Math.abs(2*composition_sr*team_size - active_players_total_sr)/team_size );
+		var class_unevenness = calc_class_unevenness(new_composition_players);
+		
+		// balance target function
+		var class_unevenness_value = Number(document.getElementById("balance_class_uneveness_value").value);
+		var btf = Math.round( class_unevenness*class_unevenness_value + (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value), 1 );
+		
 		var new_composition = {
 			sr: composition_sr,
 			sr_diff: sr_diff,
 			players: new_composition_players,
-			meets_restricion: meets_restricion
+			class_unevenness: class_unevenness,
+			btf: btf
 		};
 		balance_team_combinations.push( new_composition );
 		
-		if( (sr_diff < best_sr_diff) && new_composition.meets_restricion  ) {
-			best_sr_diff = sr_diff;
-			best_sr_diff_index = balance_team_combinations.length-1;
+		if( btf < best_btf ) {
+			best_btf = btf;
+			best_btf_index = balance_team_combinations.length-1;
 		}
 	}
 	
@@ -1129,19 +1158,19 @@ function balance_teams() {
 	for (var i=0; i<active_players.length; i++ ) {
 		active_players_total_sr += calc_player_sr( active_players[i] );
 	}
-	best_sr_diff = active_players_total_sr;
-	best_sr_diff_index = -1;
+	best_btf = Number.MAX_VALUE;
+	best_btf_index = -1;
 	
 	current_team_combination.splice( 0, current_team_combination.length );
 	balance_team_combinations.splice( 0, balance_team_combinations.length );
 	
 	generate_team_combination(0);
 	
-	if( best_sr_diff_index >= 0 ) {
+	if( best_btf_index >= 0 ) {
 		team1.splice( 0, team1.length );
 		team2.splice( 0, team2.length );
 		
-		team1 = balance_team_combinations[best_sr_diff_index].players.slice();
+		team1 = balance_team_combinations[best_btf_index].players.slice();
 		for (var i=0; i<active_players.length; i++ ) {
 			if( team1.indexOf(active_players[i]) == -1 ) {
 				team2.push(active_players[i]);
@@ -1163,19 +1192,24 @@ function balance_teams() {
 		for (var i=1; i<=team_size; i++ ) {
 			res += "player"+i+",";
 		}
-		res += "=,SR diff,balance restrictions<br/>";
+		res += "=,SR diff,class unevenness,btf<br/>";
 		
 		//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
+		if (document.getElementById("balance_dbg_sort").checked) {
+			balance_team_combinations.sort(function(comb1, comb2){  return comb1.btf-comb2.btf; });
+		}
 		
 		for (var i=0; i<balance_team_combinations.length; i++ ) {
 			res += i + ",";
 			for (var p=0; p<balance_team_combinations[i].players.length; p++) {
 				res = res + balance_team_combinations[i].players[p].display_name + ",";
 			}
-			res += "=," + balance_team_combinations[i].sr_diff + "," + balance_team_combinations[i].meets_restricion + "<br/>";
+			res += "=," + balance_team_combinations[i].sr_diff + "," 
+				+ balance_team_combinations[i].class_unevenness + ","
+				+ balance_team_combinations[i].btf + "<br/>";
 			
 		}
-		res = res +  "best # " + best_sr_diff_index;
+		res = res +  "best # " + best_btf_index;
 		document.getElementById("balance_dbg_test_result").innerHTML = res;
 	}
 }	
@@ -1532,17 +1566,14 @@ function create_empty_player() {
 }
 
 function create_random_player( id ) {
-	var class_names = [
-		"offence",
-		"defence",
-		"tank",
-		"support"
-		];
+	var classes = class_names.slice();
 	var top_classes = [];
-	top_classes.push( class_names.splice( Math.round(Math.random()*3), 1 )[0] );
-	top_classes.push( class_names[ Math.round(Math.random()*2) ] );
+	top_classes.push( classes.splice( Math.round(Math.random()*(classes.length-1)), 1 )[0] );
+	if( Math.random() > 0.4 ) {
+		top_classes.push( classes[ Math.round(Math.random()*(classes.length-1)) ] );
+	}
 	return {
-			id: "player"+id+"#1234",
+			id: "player"+id+"-"+Math.round(Math.random()*99999),
 			display_name: "player"+id,
 			sr: Math.round(Math.random()*5000),
 			level: Math.round(Math.random()*2000),
@@ -1732,9 +1763,16 @@ Region
 						<img src="class_icons/defence.png" style="height: 1em;"/>
 						<input disabled id="balance_adjust_sr_defence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
 						% SR for defence mains </br>
-					</div></br>
-					<input type="checkbox" id="balance_require_all_class" onchange="save_settings_value(this);" title="Ensures that both teams will have at least 2 dps, 2 tank and 2 support players">
-					<label for="balance_require_all_class" title="Ensures that both teams will have at least 2 dps, 2 tank and 2 support players">Teams must have enough players for all roles</label>
+					</div>
+					</br>
+										
+					<span>Balance algorithm tuning</span></br>
+					<input id="balance_class_uneveness_value" type="range" size=3 min=0 max=100 autocomplete="off" value="70" style="width:90%" onchange="save_settings_value(this);" />
+					</br>
+					<div style="position: relative; top: -0.5em;margin-left: 1em;margin-right: 1em;">
+						<span>equal SR</span>
+						<span style="position: absolute;right: 0;">equal classes</span>
+					</div>
 				</div>
 			</div>
 			
@@ -1773,6 +1811,13 @@ Region
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>You can export and import player list from lobby</li>
 					<li>Click 'Balance teams' to automatically swap players between teams for minimum average SR difference</li>
+					<li>Balance algorithm tuning slider:
+						<ul>
+							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
+							<li>In rightmost position balancer will only account player heroes/classes, SR difference can be huge</li>
+							<li>In intermediate position balancer will account both SR and classes in a given proportion</li>
+						</ul> 
+					</li>
 				</ul> 
 			</div>
 		</div>
@@ -1856,7 +1901,15 @@ Region
 	</div>
 </div>
 
-<input type="checkbox" id="balance_dbg" style="display: none;">
+<div style="display: none;">
+Balance debug settings <br/>
+<input type="checkbox" title="balance debug out" id="balance_dbg"  autocomplete="off">
+<label for="balance_dbg">Print all possible team compositions</label>
+<br/>
+<input type="checkbox" title="balance debug sort" id="balance_dbg_sort" autocomplete="off">
+<label for="balance_dbg_sort">Sort team compositions</label>
+</div>
+
 <div id="balance_dbg_test_result" style="display: none;"></div>
 
 <script>
@@ -1877,7 +1930,7 @@ var settings_list = [
 	"balance_adjust_sr_tank",
 	"balance_adjust_sr_support",
 	"balance_adjust_sr_defence",
-	"balance_require_all_class",
+	"balance_class_uneveness_value",
 	"update_class",
 	"update_sr",
 	"update_edited_fields"
@@ -1893,7 +1946,10 @@ for ( i in settings_list ) {
 			setting_input.value = setting_value;
 		} else if ( setting_input.type == "number" ) {
 			setting_input.value = Number(setting_value);
+		} else if ( setting_input.type == "range" ) {
+			setting_input.value = Number(setting_value);
 		}
+		
 		
 	}
 }
