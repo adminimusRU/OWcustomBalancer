@@ -1,4 +1,6 @@
-* Precision class balance and SR calculation
+* Precision class balance 
 * If adding duplicate player ask to move him to selected team instead
 * Better handling of OWAPI response (exceptions, HTTP state) 
 * Option to mark team captains
+* Handle one-trick-ponies in balancer;
+* Show top player heroes;
