@@ -297,9 +297,8 @@ var lobby = [];
 var team_size = 6;
 var region = "eu";
 var current_player_edit = "";
-var min_api_request_interval = 5000; //milliseconds
 
-// global variables for recursive team balancer
+// variables for recursive team balancer
 var balance_team_combinations = [];
 var current_team_combination = [];
 var active_players = [];
@@ -346,9 +345,73 @@ var class_names = [
 	"tank"
 ];
 
-// stats updater variables
+// player stats fetcher
 var players_for_update = [];
 var total_playets_for_update = 0;
+var min_api_request_interval = 5000; //milliseconds
+var top_class_min_time = 0.25; // fraction of overall time played
+
+// OWAPI interface object
+// usage: 
+// 1. set id to player BattleTag
+// 2. set onSuccess and onFail callback functions
+// 3. call getStats() method
+var OWAPI = {
+	id: "", // player battletag
+	display_name: "", // first part of battletag before '#'
+	sr: 0,
+	level: 0,
+	top_classes: [],
+	onSuccess: undefined, // Set to actual callback function before use
+	onFail: undefined, // Set to actual callback function before use
+	getStats: function() {
+		// reset
+		this.sr = 0;
+		this.level = 0;
+		this.top_classes = [];
+		
+		this.id = this.id.trim().replace("#", "-");
+		this.display_name = this.id.slice( 0, this.id.search("-") );
+	
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 ) {
+				if ( this.status == 200) {
+					try {
+						var stats_obj = JSON.parse(this.responseText);
+						if ( stats_obj[region] === null ) {	
+							throw "Player has no stats in region "+region.toUpperCase();
+						}
+						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
+						OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
+						OWAPI.top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+						
+						OWAPI.onSuccess.call();					
+					}
+					catch (err) {
+						if(typeof OWAPI.onFail == "function") {
+							OWAPI.onFail.call( err.message );
+						}
+					}
+						
+				} else {
+					var msg = "";
+					switch (this.status) {
+						case 404: msg = "Player not found (incorrect BattleTag)"; break;
+						case 429: msg = "Too many stats requests, try later"; break;
+						default: msg = "Can't get player stats (HTTP "+this.status+": "+this.statusText+")";
+					}
+					if(typeof OWAPI.onFail == "function") {
+						OWAPI.onFail.call( OWAPI, msg );
+					}
+				}
+			}
+		};
+		xhttp.open("GET", "https://owapi.net/api/v3/u/"+this.id+"/blob", true);
+		xhttp.send();
+	}
+}
+
 
 /*
 *		UI functions
@@ -592,7 +655,7 @@ function calculate_top_classes( hero_playtime ) {
 	}
 	top_class = class_playtime_arr.shift();
 	if( top_class !== undefined ) {
-		if( Number(top_class[1])/total_playtime >= 0.25 ) {
+		if( Number(top_class[1])/total_playtime >= top_class_min_time ) {
 			top_classes.push( top_class[0] );
 		}
 	}
@@ -620,7 +683,12 @@ function update_next_player_stats( ) {
 		var current_player = players_for_update[0];
 		document.getElementById("update_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
 		
-		var xhttp = new XMLHttpRequest();
+		OWAPI.id = current_player.id;
+		OWAPI.onSuccess = update_player_success;
+		OWAPI.onFail = update_player_fail;
+		OWAPI.getStats();
+		
+		/*var xhttp = new XMLHttpRequest();
 		
 		xhttp.onreadystatechange = function() {
 			if (this.readyState == 4 ) {
@@ -665,6 +733,7 @@ function update_next_player_stats( ) {
 		
 		xhttp.open("GET", "https://owapi.net/api/v3/u/"+current_player.id+"/blob", true);
 		xhttp.send();
+		*/
 	} else {
 		// all players updated
 		alert("All stats updated");
@@ -673,6 +742,42 @@ function update_next_player_stats( ) {
 		document.getElementById("update_stats_btn").value = "↻ Update stats";
 		redraw_teams();
 		fill_player_stats_dlg();
+	}
+}
+
+function update_player_success() {
+	var player = players_for_update.shift();
+	
+	player.level = OWAPI.level;
+	
+	if( document.getElementById("update_sr").checked ) {
+		// check if SR was manually edited and update option checked
+		if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
+			player.sr = OWAPI.sr;
+			player.se = false;
+		}
+	}
+	
+	if( document.getElementById("update_class").checked ) {
+		// check if class was manually edited and update option checked
+		if ( (player.ce !== true) || document.getElementById("update_edited_fields").checked ) {
+			player.top_classes = OWAPI.top_classes;
+			player.ce = false;
+		}
+	}
+	
+	setTimeout( update_next_player_stats, min_api_request_interval );
+}
+
+function update_player_fail( msg ) {
+	players_for_update.shift();
+	if( confirm( "Error on updating player "+OWAPI.id+": "+msg+". Continue updating stats?" ) ) {
+		setTimeout( update_next_player_stats, min_api_request_interval );
+	} else {
+		document.getElementById("update_stats_btn").disabled = false;
+		document.getElementById("dlg_update_player_stats").disabled = false;
+		document.getElementById("update_stats_btn").value = "↻ Update stats";
+		redraw_teams();
 	}
 }
 
@@ -1235,8 +1340,8 @@ function balance_teams() {
 
 function add_player_click() {
 	var player_id = document.getElementById("new_player_id").value;
-	player_id = player_id.trim().replace("#", "-");
-	player_name = player_id.slice( 0, player_id.search("-") );
+	/*player_id = player_id.trim().replace("#", "-");
+	player_name = player_id.slice( 0, player_id.search("-") );*/
 	
 	// check duplicates
 	for( var i=0; i<team1.length; i++) {
@@ -1259,6 +1364,7 @@ function add_player_click() {
 	}
 	
 	// determine team to add new player
+	/*
 	var new_player_team;
 	var team_selectors = document.getElementsByName("add_team_select");
     for (var i=0; i<team_selectors.length; i++) {
@@ -1284,7 +1390,17 @@ function add_player_click() {
 		alert("Team is full");
 		return;
 	}
+	*/
 	
+	document.getElementById("add_btn").disabled = true;
+	document.getElementById("add_btn").innerHTML = "processing...";
+	
+	OWAPI.id = player_id;
+	OWAPI.onSuccess = add_player_success;
+	OWAPI.onFail = add_player_fail;
+	OWAPI.getStats();
+	
+	/*
 	var xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 ) {
@@ -1319,6 +1435,58 @@ function add_player_click() {
 	document.getElementById("add_btn").disabled = true;
 	document.getElementById("add_btn").innerHTML = "processing...";
 	xhttp.send();
+	*/
+}
+
+function add_player_success() {
+	var new_player = {
+		id: OWAPI.id,
+		display_name: OWAPI.display_name, 
+		sr: OWAPI.sr,
+		level: OWAPI.level,
+		top_classes: OWAPI.top_classes,
+	};
+	
+	var new_player_team;
+	var team_selectors = document.getElementsByName("add_team_select");
+    for (var i=0; i<team_selectors.length; i++) {
+        if (team_selectors[i].checked) {
+			if (team_selectors[i].value == "team1") {
+				new_player_team = team1;
+			} else if (team_selectors[i].value == "team2") {
+				new_player_team = team2;
+			} else if (team_selectors[i].value == "lobby") {
+				new_player_team = lobby;
+			} else { // auto team
+				if (team1.length < team_size) {
+					new_player_team = team1;
+				} else {
+					new_player_team = team2;
+				}
+			}
+		}
+	}
+	
+	// check if team has free slots
+	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
+		//alert("Team is full");
+		//return;
+		new_player_team = lobby;
+	}
+	
+	new_player_team.push(new_player);
+	
+	document.getElementById("new_player_id").value = "";
+	document.getElementById("add_btn").disabled = false;
+	document.getElementById("add_btn").innerHTML = "add player";
+	
+	redraw_teams();
+}
+
+function add_player_fail( msg ) {
+	document.getElementById("add_btn").disabled = false;
+	document.getElementById("add_btn").innerHTML = "add player";
+	alert( msg );
 }
 
 function export_lobby() {
@@ -1521,10 +1689,15 @@ function fill_player_stats_dlg() {
 	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
 	if( player_struct.ne === true )  {
 		document.getElementById("dlg_player_name_edited").style.visibility = "visible";
+	} else {
+		document.getElementById("dlg_player_name_edited").style.visibility = "";
 	}
+	
 	document.getElementById("dlg_player_sr").value = player_struct.sr;
 	if( player_struct.se === true )  {
 		document.getElementById("dlg_player_sr_edited").style.visibility = "visible";
+	} else {
+		document.getElementById("dlg_player_sr_edited").style.visibility = "";
 	}
 	document.getElementById("dlg_player_level").value = player_struct.level;
 	
@@ -1543,6 +1716,9 @@ function fill_player_stats_dlg() {
 	if( player_struct.ce === true )  {
 		document.getElementById("dlg_player_class1_edited").style.visibility = "visible";
 		document.getElementById("dlg_player_class2_edited").style.visibility = "visible";
+	} else {
+		document.getElementById("dlg_player_class1_edited").style.visibility = "";
+		document.getElementById("dlg_player_class2_edited").style.visibility = "";
 	}
 }
 
