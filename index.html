@@ -157,8 +157,12 @@ body {
 	min-width: 20em;
 }
 
+ul {
+	padding-inline-start: 1em;
+}
+
 li {
-	margin-bottom: 1em;
+	margin-bottom: 0.4em;
 }
 
 .class-icon {
@@ -302,7 +306,7 @@ var active_players = [];
 var active_players_total_sr = 0;
 var best_btf = 0;
 var best_btf_index = 0;
-var balance_max_sr_diff = 2000;
+var balance_max_sr_diff = 1000;
 var balance_exclude_classes = [ "defence" ];
 
 // hero list for calculating main classes
@@ -1058,24 +1062,18 @@ function update_current_player_stats() {
 */
 
 // calculates uneveness of class distribution across teams
-// return value: percent (0-100) of uneveness, 0 = even (perfect) class distribution, 100 = completely uneven class distribution
-function calc_class_unevenness( temp_team1 ) {
-	var temp_team2 = [];
-	for( i in active_players ) {
-		if ( temp_team1.indexOf(active_players[i]) == -1 ) {
-			temp_team2.push(active_players[i]);
-		}
-	}
+// return value: measure of uneveness, 0 = even (perfect) class distribution
+function calc_class_unevenness( temp_team1, temp_team2 ) {
 	var temp_teams = [temp_team1, temp_team2];
 	
 	var team_class_unevenness = [];
 	var total_class_count = {};
-	for ( c in class_names ) {
-		total_class_count[class_names[c]] = 0;
-	}
 	
 	for( p in active_players) {
 		for( c=0; c<active_players[p].top_classes.length; c++ ) {
+			if ( total_class_count[active_players[p].top_classes[c]] === undefined ) {
+				total_class_count[active_players[p].top_classes[c]] = 0;
+			}
 			total_class_count[active_players[p].top_classes[c]] += 1 / (c+1);
 		}
 	}
@@ -1100,14 +1098,11 @@ function calc_class_unevenness( temp_team1 ) {
 		
 			if ( total_class_count[c] != 0 ) {
 				current_class_unevenness[c] = Math.abs( 100*(current_class_count[c] - (total_class_count[c]/2)) / (total_class_count[c]/2) );
-			} else {
-				current_class_unevenness[c] = 0;
-			}
+			} 
 			total_class_unevenness += current_class_unevenness[c];
 		}
 		
-		var avg_class_unevenness = total_class_unevenness / Object.keys(current_class_unevenness).length;
-		team_class_unevenness.push(avg_class_unevenness);
+		team_class_unevenness.push(total_class_unevenness);
 	};
 	
 	avg_class_unevenness = team_class_unevenness.reduce( function(total, num) {return total + num;} ) / team_class_unevenness.length;
@@ -1119,13 +1114,22 @@ function generate_team_combination(last) {
 	if (current_team_combination.length == team_size) {
 		// composition is ready, store to list
 		var new_composition_players = current_team_combination.slice();
-		var composition_sr = calculate_team_sr(new_composition_players, true);
-		var sr_diff = Math.round( Math.abs(2*composition_sr*team_size - active_players_total_sr)/team_size );
-		var class_unevenness = calc_class_unevenness(new_composition_players);
 		
-		// balance target function
+		var opposite_team = [];
+		for( i in active_players ) {
+			if ( new_composition_players.indexOf(active_players[i]) == -1 ) {
+				opposite_team.push(active_players[i]);
+			}
+		}
+		
+		var composition_sr = calculate_team_sr(new_composition_players, true);
+		var opposite_sr = calculate_team_sr(opposite_team, true);
+		var sr_diff = Math.abs( composition_sr - opposite_sr );
+		var class_unevenness = calc_class_unevenness( new_composition_players, opposite_team );
+		
+		// balance target function. Minimum BTF value = best balance
 		var class_unevenness_value = Number(document.getElementById("balance_class_uneveness_value").value);
-		var btf = Math.round( class_unevenness*class_unevenness_value + (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value), 1 );
+		var btf = Math.round( (class_unevenness*class_unevenness_value + (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value))/100, 1 );
 		
 		var new_composition = {
 			sr: composition_sr,
@@ -1164,13 +1168,23 @@ function balance_teams() {
 	current_team_combination.splice( 0, current_team_combination.length );
 	balance_team_combinations.splice( 0, balance_team_combinations.length );
 	
+	// start recursive function to generate all possible team combinations
 	generate_team_combination(0);
 	
 	if( best_btf_index >= 0 ) {
+		// find all combinations with best BTF value and select random item
+		var best_combinations = [];
+		for ( i in balance_team_combinations ) {
+			if ( balance_team_combinations[i].btf == best_btf ) {
+				best_combinations.push( balance_team_combinations[i] );
+			}
+		}
+		best_btf_index = Math.round( Math.random()*(best_combinations.length-1) );
+	
 		team1.splice( 0, team1.length );
 		team2.splice( 0, team2.length );
 		
-		team1 = balance_team_combinations[best_btf_index].players.slice();
+		team1 = best_combinations[best_btf_index].players.slice();
 		for (var i=0; i<active_players.length; i++ ) {
 			if( team1.indexOf(active_players[i]) == -1 ) {
 				team2.push(active_players[i]);
@@ -1703,10 +1717,10 @@ Region
 			
 			<br/>
 			<div >
-			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams"/>
+			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams" title="Automatically find most balanced compositions"/>
 			<br/>
 			<br/>
-			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats"/>
+			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats" title="Update stats for all players"/>
 			
 			<br/>
 			<br/>
@@ -1810,14 +1824,15 @@ Region
 					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>You can export and import player list from lobby</li>
-					<li>Click 'Balance teams' to automatically swap players between teams for minimum average SR difference</li>
+					<li>Click 'Balance teams' to automatically swap players between teams for best balance</li>
 					<li>Balance algorithm tuning slider:
 						<ul>
 							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
-							<li>In rightmost position balancer will only account player heroes/classes, SR difference can be huge</li>
+							<li>In rightmost position balancer will only account player classes (SR difference can be huge)</li>
 							<li>In intermediate position balancer will account both SR and classes in a given proportion</li>
 						</ul> 
 					</li>
+					<li>Click 'Balance teams' again to look through best balance variants</li>
 				</ul> 
 			</div>
 		</div>
@@ -1901,7 +1916,7 @@ Region
 	</div>
 </div>
 
-<div style="display: none;">
+<div title="Balance debug" style="display: none;">
 Balance debug settings <br/>
 <input type="checkbox" title="balance debug out" id="balance_dbg"  autocomplete="off">
 <label for="balance_dbg">Print all possible team compositions</label>
