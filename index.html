@@ -64,6 +64,16 @@ body {
 	cursor: grab;
 }
 
+.player-highlighted {
+	animation-name: highlight;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+}
+
+@keyframes highlight {
+    50%  {background-color: Gold;}
+}
+
 .empty-player {
 	cursor: default;
 }
@@ -588,6 +598,25 @@ function new_player_keyup(ev) {
     }
 }
 
+function highlight_player( player_id ) {
+	document.getElementById(player_id).classList.toggle("player-highlighted", true);
+	setTimeout( reset_highlighted_players, 2000 );
+}
+
+function highlight_players( player_id_list ) {
+	for( i=0; i<player_id_list.length; i++ ) {
+		document.getElementById(player_id_list[i]).classList.toggle("player-highlighted", true);
+	}
+	
+	setTimeout( reset_highlighted_players, 2000 );
+}
+
+function reset_highlighted_players() {
+	var elems = document.getElementsByClassName( "player-highlighted" );
+	for( i=0; i<elems.length; i++ ) {
+		elems[i].classList.toggle("player-highlighted", false);
+	}
+}
 
 /*
 *		Player stats functions
@@ -1294,25 +1323,39 @@ function balance_teams() {
 
 function add_player_click() {
 	var player_id = document.getElementById("new_player_id").value;
+	player_id = player_id.trim().replace("#", "-");
 	
 	// check duplicates
+	var is_duplicate = false;
 	for( var i=0; i<team1.length; i++) {
 		if( team1[i].id == player_id) {
-			alert("Player already added");
-			return;
+			is_duplicate = true;
+			break;
 		}
 	}
-	for( var i=0; i<team2.length; i++) {
-		if( team2[i].id == player_id) {
-			alert("Player already added");
-			return;
+	if ( ! is_duplicate ) {
+		for( var i=0; i<team2.length; i++) {
+			if( team2[i].id == player_id) {
+				is_duplicate = true;
+				break;
+			}
 		}
 	}
-	for( var i=0; i<lobby.length; i++) {
-		if( lobby[i].id == player_id) {
-			alert("Player already added");
-			return;
+	if ( ! is_duplicate ) {
+		for( var i=0; i<lobby.length; i++) {
+			if( lobby[i].id == player_id) {
+				is_duplicate = true;
+				document.getElementById(player_id).scrollIntoView( false );
+				break;
+			}
 		}
+	}
+	
+	if ( is_duplicate ) {
+		alert("Player already added");
+		document.getElementById(player_id).classList.toggle("player-highlighted", true);
+		setTimeout( reset_highlighted_players , 2000);
+		return;
 	}
 	
 	document.getElementById("add_btn").disabled = true;
@@ -1365,6 +1408,10 @@ function add_player_success() {
 	document.getElementById("add_btn").innerHTML = "add player";
 	
 	redraw_teams();
+	
+	// show and highlight new player
+	setTimeout( function() {document.getElementById(new_player.id).scrollIntoView(false);}, 100 );
+	setTimeout( function() {highlight_player( new_player.id );}, 500 );
 }
 
 function add_player_fail( msg ) {
@@ -1407,6 +1454,7 @@ function import_lobby_dlg() {
 
 function import_lobby() {
 	var import_str = document.getElementById("dlg_textarea").value;
+	var added_players = [];
 
 	if (import_str !== null && import_str != "") {
 		if ( document.getElementById("dlg_format_value").value == "json" ) {
@@ -1425,6 +1473,7 @@ function import_lobby() {
 					}
 					
 					lobby.splice(lobby.length, 0, import_struct.players[i]);
+					added_players.push( import_struct.players[i].id );
 				}
 				
 				redraw_teams();
@@ -1432,6 +1481,7 @@ function import_lobby() {
 			catch(err) {
 				// try to parse as plain battletag list
 				alert("Incorrect import format");
+				return;
 			}
 		} else if (document.getElementById("dlg_format_value").value == "battletags") {
 			var battletag_list = import_str.trim().split("\n");
@@ -1448,6 +1498,7 @@ function import_lobby() {
 					};
 				lobby.push( new_player );
 				players_for_update.push( new_player );
+				added_players.push( new_player.id );
 			}
 			redraw_teams();
 			
@@ -1457,6 +1508,10 @@ function import_lobby() {
 			document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 			update_next_player_stats();
 		}
+		
+		// highlight all new players and scroll to show last one
+		setTimeout( function() {document.getElementById( added_players[added_players.length-1] ).scrollIntoView(false);}, 100 );
+		setTimeout( function() {highlight_players( added_players );}, 500 );
 	}
 }
 
@@ -1569,7 +1624,9 @@ function fill_player_stats_dlg() {
 	
 	var player_struct = find_player_by_id(current_player_edit);
 	
-	document.getElementById("dlg_player_id").value = player_struct.id;
+	document.getElementById("dlg_player_id").href = "https://playoverwatch.com/en-us/career/pc/"+region+"/"+player_struct.id;
+	document.getElementById("dlg_player_id").innerHTML = player_struct.id;
+	
 	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
 	if( player_struct.ne === true )  {
 		document.getElementById("dlg_player_name_edited").style.visibility = "visible";
@@ -1675,12 +1732,21 @@ function fill_test_teams() {
 		return;
 	}
 
+	var added_players = [];
 	for( var i=1; i<=number_to_add; i++ ) {
 		var new_player = create_random_player(i);
+		if ( find_player_by_id(new_player.id) !== undefined ) {
+			continue;
+		}
 		lobby.push( new_player );
+		added_players.push( new_player.id );
 	}
 
 	redraw_teams();
+	
+	// highlight all new players and scroll to show last one
+	setTimeout( function() {document.getElementById( added_players[added_players.length-1] ).scrollIntoView(false);}, 100 );
+	setTimeout( function() {highlight_players( added_players );}, 500 );
 }
 
 </script>
@@ -1919,8 +1985,8 @@ Region
 			<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
 			<div id="dlg_player_edit" class="dlg_options table">
 				<div class="row">
-					<div class="cell"><label for="dlg_player_id">BattleTag:</label></div>
-					<div class="cell"><input id="dlg_player_id" type="text" readonly></div>
+					<div class="cell">BattleTag:</div>
+					<div class="cell"><a href="" id="dlg_player_id"></a></div>
 				</div>
 				<div class="row">
 					<div class="cell"><label for="dlg_player_display_name">Name:</label></div>
