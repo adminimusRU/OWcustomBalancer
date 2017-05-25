@@ -460,6 +460,15 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.className = "cell player-item";
 	new_player_item.id = player_struct.id;
 	new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
+	if ( Array.isArray(player_struct.top_heroes) ) {
+		new_player_item.title += "\nTop heroes: ";
+		for( i=0; i<player_struct.top_heroes.length; i++ ) {
+			new_player_item.title += player_struct.top_heroes[i].hero;
+			if ( i< player_struct.top_heroes.length-1) {
+				new_player_item.title += ", ";
+			}
+		}
+	}
 	new_player_item.onclick = function(){player_item_onclick(this, team_id);};
 	if( ! player_struct.empty) {
 		new_player_item.draggable = true;
