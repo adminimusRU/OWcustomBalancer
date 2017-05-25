@@ -356,6 +356,7 @@ var top_class_min_time = 0.25; // fraction of overall time played
 // 1. set id to player BattleTag
 // 2. set onSuccess and onFail callback functions
 // 3. call getStats() method
+// 4. object field filled with stats. Read them in onSuccess callback or process error in onFail
 var OWAPI = {
 	id: "", // player battletag
 	display_name: "", // first part of battletag before '#'
@@ -687,53 +688,6 @@ function update_next_player_stats( ) {
 		OWAPI.onSuccess = update_player_success;
 		OWAPI.onFail = update_player_fail;
 		OWAPI.getStats();
-		
-		/*var xhttp = new XMLHttpRequest();
-		
-		xhttp.onreadystatechange = function() {
-			if (this.readyState == 4 ) {
-				var player =  players_for_update.shift();
-				var cancel_update = false;
-				
-				if ( this.status == 200) {
-					var stats_obj = JSON.parse(this.responseText);
-					if ( stats_obj[region] !== null ) {
-						var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
-						
-						if( document.getElementById("update_sr").checked ) {
-							// check if SR was manually edited and update option checked
-							if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
-								player.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
-							}
-						}
-						player.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level;
-						if( document.getElementById("update_class").checked ) {
-							// check if class was manually edited and update option checked
-							if ( (player.ce !== true) || document.getElementById("update_edited_fields").checked ) {
-								player.top_classes = top_classes;
-							}
-						}
-					} else {
-						if( ! confirm( "Player "+player.id+" has no stats in region "+region.toUpperCase()+". Continue updating stats?" ) ) {
-							cancel_update = true;
-						}
-					}
-				}
-				
-				if( cancel_update) {
-					document.getElementById("update_stats_btn").disabled = false;
-					document.getElementById("dlg_update_player_stats").disabled = false;
-					document.getElementById("update_stats_btn").value = "↻ Update stats";
-					redraw_teams();
-				} else {
-					setTimeout( update_next_player_stats, min_api_request_interval );
-				}
-			}
-		};
-		
-		xhttp.open("GET", "https://owapi.net/api/v3/u/"+current_player.id+"/blob", true);
-		xhttp.send();
-		*/
 	} else {
 		// all players updated
 		alert("All stats updated");
@@ -1340,8 +1294,6 @@ function balance_teams() {
 
 function add_player_click() {
 	var player_id = document.getElementById("new_player_id").value;
-	/*player_id = player_id.trim().replace("#", "-");
-	player_name = player_id.slice( 0, player_id.search("-") );*/
 	
 	// check duplicates
 	for( var i=0; i<team1.length; i++) {
@@ -1363,35 +1315,6 @@ function add_player_click() {
 		}
 	}
 	
-	// determine team to add new player
-	/*
-	var new_player_team;
-	var team_selectors = document.getElementsByName("add_team_select");
-    for (var i=0; i<team_selectors.length; i++) {
-        if (team_selectors[i].checked) {
-			if (team_selectors[i].value == "team1") {
-				new_player_team = team1;
-			} else if (team_selectors[i].value == "team2") {
-				new_player_team = team2;
-			} else if (team_selectors[i].value == "lobby") {
-				new_player_team = lobby;
-			} else { // auto team
-				if (team1.length < team_size) {
-					new_player_team = team1;
-				} else {
-					new_player_team = team2;
-				}
-			}
-		}
-	}
-	
-	// check if team has free slots
-	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
-		alert("Team is full");
-		return;
-	}
-	*/
-	
 	document.getElementById("add_btn").disabled = true;
 	document.getElementById("add_btn").innerHTML = "processing...";
 	
@@ -1399,43 +1322,6 @@ function add_player_click() {
 	OWAPI.onSuccess = add_player_success;
 	OWAPI.onFail = add_player_fail;
 	OWAPI.getStats();
-	
-	/*
-	var xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 ) {
-			if ( this.status == 200) {
-				var stats_obj = JSON.parse(this.responseText);
-				if ( stats_obj[region] !== null ) {	
-					var top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
-					
-					var new_player = {
-						id: player_id,
-						display_name: player_name, 
-						sr: Number(stats_obj[region].stats.competitive.overall_stats.comprank),
-						level: stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
-						top_classes: top_classes,
-					};
-					new_player_team.push(new_player);
-					
-					document.getElementById("new_player_id").value = "";
-					
-					redraw_teams();
-				} else {
-					alert("Player has no stats in region "+region.toUpperCase());
-				}
-			} else {
-				alert("Can't get player stats ("+this.status+"), connection problem or incorrect BattleTag");
-			}
-		}
-		document.getElementById("add_btn").disabled = false;
-		document.getElementById("add_btn").innerHTML = "add player";
-	};
-	xhttp.open("GET", "https://owapi.net/api/v3/u/"+player_id+"/blob", true);
-	document.getElementById("add_btn").disabled = true;
-	document.getElementById("add_btn").innerHTML = "processing...";
-	xhttp.send();
-	*/
 }
 
 function add_player_success() {
@@ -1469,8 +1355,6 @@ function add_player_success() {
 	
 	// check if team has free slots
 	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
-		//alert("Team is full");
-		//return;
 		new_player_team = lobby;
 	}
 	
