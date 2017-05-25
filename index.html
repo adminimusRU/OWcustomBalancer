@@ -296,6 +296,16 @@ input[readonly] {
 	font-weight: bold;
 }
 
+.hero-icon-list {
+	
+}
+
+.hero-icon {
+	display: inline;
+	height: 64px;
+	margin-right: 0.5em;
+}
+
 </style>
 
 <script language="JavaScript" type="text/javascript">
@@ -360,6 +370,7 @@ var players_for_update = [];
 var total_playets_for_update = 0;
 var min_api_request_interval = 5000; //milliseconds
 var top_class_min_time = 0.25; // fraction of overall time played
+var top_hero_min_time = 0.10; // fraction of overall time played
 
 // OWAPI interface object
 // usage: 
@@ -372,14 +383,20 @@ var OWAPI = {
 	display_name: "", // first part of battletag before '#'
 	sr: 0,
 	level: 0,
+	time_played: 0,
 	top_classes: [],
+	top_heroes: [],
+	
 	onSuccess: undefined, // Set to actual callback function before use
 	onFail: undefined, // Set to actual callback function before use
+	
 	getStats: function() {
 		// reset
 		this.sr = 0;
 		this.level = 0;
+		this.time_played = 0;
 		this.top_classes = [];
+		this.top_heroes = [];
 		
 		this.id = this.id.trim().replace("#", "-");
 		this.display_name = this.id.slice( 0, this.id.search("-") );
@@ -395,7 +412,9 @@ var OWAPI = {
 						}
 						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
 						OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
+						OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
 						OWAPI.top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
+						OWAPI.top_heroes = calculate_top_heroes( stats_obj[region].heroes.playtime.competitive );
 						
 						OWAPI.onSuccess.call();					
 					}
@@ -693,6 +712,32 @@ function calculate_top_classes( hero_playtime ) {
 	return top_classes;
 }
 
+// returns top 4 heroes by playtime
+function calculate_top_heroes( hero_playtime ) {
+	var total_playtime = 0;
+	for (var hero_name in hero_playtime ) {
+		total_playtime += hero_playtime[hero_name];
+	}
+	
+	var top_heroes = [];
+	for (var hero_name in hero_playtime ) {
+		if ( hero_playtime[hero_name] / total_playtime >= top_hero_min_time ) {
+			top_heroes.push( { hero: hero_name, playtime: Math.round(hero_playtime[hero_name],1)} );
+		}
+	}
+	
+	top_heroes.sort( function(hero1, hero2) {
+			return hero2.playtime - hero1.playtime;
+		});
+		
+	while (top_heroes.length > 4) {
+		top_heroes.pop();
+	}
+	
+	return top_heroes;
+}
+
+
 function calculate_team_sr( team, use_balance_options=false ) {
 	var team_sr = 0;
 	if (team.length > 0) {
@@ -748,6 +793,8 @@ function update_player_success() {
 			player.ce = false;
 		}
 	}
+	
+	player.top_heroes = OWAPI.top_heroes;
 	
 	setTimeout( update_next_player_stats, min_api_request_interval );
 }
@@ -1075,6 +1122,7 @@ function player_contextmenu(ev) {
 	document.getElementById("dlg_title").innerHTML = player_struct.display_name;
 	document.getElementById("dlg_player_edit").style.display = "block";
 	document.getElementById("dlg_class_select").style.display = "block";
+	document.getElementById("dlg_top_heroes").style.display = "block";
 	document.getElementById("dlg_update_player_stats").style.display = "block";
 	
 	fill_player_stats_dlg();
@@ -1374,6 +1422,7 @@ function add_player_success() {
 		sr: OWAPI.sr,
 		level: OWAPI.level,
 		top_classes: OWAPI.top_classes,
+		top_heroes: OWAPI.top_heroes,
 	};
 	
 	var new_player_team;
@@ -1472,6 +1521,10 @@ function import_lobby() {
 						import_struct.players[i].top_classes = [];
 					}
 					
+					if ( ! Array.isArray(import_struct.players[i].top_heroes) ) {
+						import_struct.players[i].top_heroes = [];
+					}
+					
 					lobby.splice(lobby.length, 0, import_struct.players[i]);
 					added_players.push( import_struct.players[i].id );
 				}
@@ -1495,6 +1548,7 @@ function import_lobby() {
 						sr: 0,
 						level: 0,
 						top_classes: [],
+						top_heroes: [],
 					};
 				lobby.push( new_player );
 				players_for_update.push( new_player );
@@ -1589,6 +1643,9 @@ function restore_team( team, team_name ) {
 			if ( ! Array.isArray(team[i].top_classes) ) {
 				team[i].top_classes = [];
 			}
+			if ( ! Array.isArray(team[i].top_heroes) ) {
+				team[i].top_heroes = [];
+			}
 		}
 	}
 }
@@ -1609,6 +1666,7 @@ function init_popup_dlg() {
 	document.getElementById("dlg_player_class1_edited").style.visibility = "";
 	document.getElementById("dlg_player_class2_edited").style.visibility = "";
 	document.getElementById("dlg_class_select").style.display = "none";
+	document.getElementById("dlg_top_heroes").style.display = "none";
 	document.getElementById("dlg_update_player_stats").style.display = "none";
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
 }
@@ -1642,7 +1700,7 @@ function fill_player_stats_dlg() {
 	}
 	document.getElementById("dlg_player_level").value = player_struct.level;
 	
-	if ( player_struct.top_classes !== undefined ) {
+	if ( Array.isArray(player_struct.top_classes) ) {
 		if ( player_struct.top_classes.length > 0 ) {
 			document.getElementById("dlg_main_class").value = player_struct.top_classes[0];
 		}
@@ -1651,6 +1709,21 @@ function fill_player_stats_dlg() {
 			document.getElementById("dlg_secondary_class").value = player_struct.top_classes[1];
 		} else {
 			document.getElementById("dlg_secondary_class").value = "";
+		}
+	}
+	
+	document.getElementById("dlg_top_heroes_icons").innerHTML = "";
+	if ( Array.isArray(player_struct.top_heroes) ) {
+		for( i=0; i<player_struct.top_heroes.length; i++ ) {
+			var hero_id = player_struct.top_heroes[i].hero;
+			if( hero_id == "soldier76") {
+				hero_id = "soldier-76";
+			}
+			var img_node = document.createElement("img");
+			img_node.className = "hero-icon";
+			img_node.src = "https://blzgdapipro-a.akamaihd.net/hero/"+hero_id+"/hero-select-portrait.png";
+			img_node.title = hero_id + "\nPlayed: " + player_struct.top_heroes[i].playtime+" h";
+			document.getElementById("dlg_top_heroes_icons").appendChild(img_node);
 		}
 	}
 	
@@ -1703,13 +1776,15 @@ function create_random_player( id ) {
 	if( Math.random() > 0.4 ) {
 		top_classes.push( classes[ Math.round(Math.random()*(classes.length-1)) ] );
 	}
+	var top_heroes = [];
 	return {
 			id: "player"+id+"-"+Math.round(Math.random()*99999),
 			display_name: "player"+id,
 			sr: Math.round(Math.random()*5000),
 			level: Math.round(Math.random()*2000),
 			empty: false,
-			top_classes: top_classes
+			top_classes: top_classes,
+			top_heroes: top_heroes
 		};
 }
 
@@ -2033,6 +2108,12 @@ Region
 						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited">&#9997;</span>
 					</div>
 				</div>	
+			</div>
+			<br/>
+			<div id="dlg_top_heroes">
+				<span>Top heroes:</span>
+				<br/>
+				<div id="dlg_top_heroes_icons" class="hero-icon-list"></div>
 			</div>
 			<br/>
 			<input id="dlg_update_player_stats" class="big-btn" type="button" value="&#8635; Update stats" onclick="update_current_player_stats();"/>
