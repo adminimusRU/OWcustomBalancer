@@ -1,9 +1,7 @@
-* Precision class balance 
-* If adding duplicate player ask to move him to selected team instead
-* Option to mark team captains
-* Handle one-trick-ponies in balancer
 * Show top player heroes
-* Add link to player profile
+* Handle one-trick-ponies in balancer
+* Option to mark team captains
 * Remove team selection for newly added player (?)
 * Remove "Clear team" buttons (?)
-* Scroll to and highlight added player
+* If adding duplicate player ask to move him to selected team instead (?)
+* Precision class balance 
