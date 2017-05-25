@@ -1255,6 +1255,29 @@ function calc_class_unevenness( temp_team1, temp_team2 ) {
 	return Math.round( avg_class_unevenness, 1 );
 }
 
+// checks if current composition variant meets restrictions
+// return value: boolean, true if all restrictions passed
+function check_balance_restrictions( temp_team1, temp_team2 ) {
+	if ( document.getElementById("balance_separate_otps").checked ) {
+		var temp_teams = [temp_team1, temp_team2];
+		for( t in temp_teams ) {
+			// array of one-trick ponies (hero names) in current team
+			var current_team_otps = []; 
+			for( p in temp_teams[t]) {
+				if ( temp_teams[t][p].top_heroes.length == 1 ) {
+					var current_otp = temp_teams[t][p].top_heroes[0].hero;
+					if (current_team_otps.indexOf(current_otp) == -1) {
+						current_team_otps.push( current_otp );
+					} else {
+						return false;
+					}
+				}
+			}
+		}
+	}
+	return true;
+}
+
 function generate_team_combination(last) {
 	if (current_team_combination.length == team_size) {
 		// composition is ready, store to list
@@ -1276,15 +1299,20 @@ function generate_team_combination(last) {
 		var class_unevenness_value = Number(document.getElementById("balance_class_uneveness_value").value);
 		var btf = Math.round( (class_unevenness*class_unevenness_value + (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value))/100, 1 );
 		
+		// balance restrictions check
+		var restrictions_passed = check_balance_restrictions( new_composition_players, opposite_team  );
+		
 		var new_composition = {
 			sr: composition_sr,
 			sr_diff: sr_diff,
 			players: new_composition_players,
 			class_unevenness: class_unevenness,
-			btf: btf
+			btf: btf,
+			restrictions: restrictions_passed
 		};
 		balance_team_combinations.push( new_composition );
 		
+		//if( (btf < best_btf) && restrictions_passed ) {
 		if( btf < best_btf ) {
 			best_btf = btf;
 			best_btf_index = balance_team_combinations.length-1;
@@ -1351,7 +1379,7 @@ function balance_teams() {
 		for (var i=1; i<=team_size; i++ ) {
 			res += "player"+i+",";
 		}
-		res += "=,SR diff,class unevenness,btf<br/>";
+		res += "=,SR diff,class unevenness,btf,restrictions<br/>";
 		
 		//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
 		if (document.getElementById("balance_dbg_sort").checked) {
@@ -1365,7 +1393,8 @@ function balance_teams() {
 			}
 			res += "=," + balance_team_combinations[i].sr_diff + "," 
 				+ balance_team_combinations[i].class_unevenness + ","
-				+ balance_team_combinations[i].btf + "<br/>";
+				+ balance_team_combinations[i].btf + ","
+				+ balance_team_combinations[i].restrictions + "<br/>";
 			
 		}
 		res = res +  "best # " + best_btf_index;
@@ -1972,7 +2001,7 @@ Region
 				</div>
 				<div class="group-content group-collapsed">
 					<input type="checkbox" id="balance_adjust_sr" onchange="balance_adjust_sr_change();">
-					<label for="balance_adjust_sr">Adjust player SR by main class </label>
+					<label for="balance_adjust_sr">Adjust player SR by main class</label>
 					</br>
 					<div class="subgroup" id="balance_adjust_sr_sub">
 						<img src="class_icons/offence.png" style="height: 1em;"/>
@@ -1997,6 +2026,10 @@ Region
 						<span>equal SR</span>
 						<span style="position: absolute;right: 0;">equal classes</span>
 					</div>
+					</br>
+					
+					<input type="checkbox" id="balance_separate_otps" onchange="save_settings_value(this);">
+					<label for="balance_separate_otps">Do not place similar one-trick ponies in the same team</label>
 				</div>
 			</div>
 			
@@ -2162,6 +2195,7 @@ var settings_list = [
 	"balance_adjust_sr_support",
 	"balance_adjust_sr_defence",
 	"balance_class_uneveness_value",
+	"balance_separate_otps",
 	"update_class",
 	"update_sr",
 	"update_edited_fields"
