@@ -1352,7 +1352,7 @@ function balance_teams() {
 		// find all combinations with best BTF value and select random item
 		var best_combinations = [];
 		for ( i in balance_team_combinations ) {
-			if ( balance_team_combinations[i].btf == best_btf ) {
+			if ( (balance_team_combinations[i].btf == best_btf) && balance_team_combinations[i].restrictions ) {
 				best_combinations.push( balance_team_combinations[i] );
 			}
 		}
