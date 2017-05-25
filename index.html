@@ -273,6 +273,10 @@ textarea {
 	vertical-align: middle;
 }
 
+.group-content {
+	padding: 0.2em;
+}
+	
 .subgroup {
 	margin-left: 1em;
 }
@@ -1312,8 +1316,8 @@ function generate_team_combination(last) {
 		};
 		balance_team_combinations.push( new_composition );
 		
-		//if( (btf < best_btf) && restrictions_passed ) {
-		if( btf < best_btf ) {
+		if( (btf < best_btf) && restrictions_passed ) {
+		//if( btf < best_btf ) {
 			best_btf = btf;
 			best_btf_index = balance_team_combinations.length-1;
 		}
@@ -2029,7 +2033,7 @@ Region
 					</br>
 					
 					<input type="checkbox" id="balance_separate_otps" onchange="save_settings_value(this);">
-					<label for="balance_separate_otps">Do not place similar one-trick ponies in the same team</label>
+					<label for="balance_separate_otps">Do not place similar one-trick ponies into same team</label>
 				</div>
 			</div>
 			
