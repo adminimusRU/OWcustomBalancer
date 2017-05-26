@@ -64,6 +64,10 @@ body {
 	cursor: grab;
 }
 
+.team-captain {
+	background-color: PaleGreen;
+}
+
 .player-highlighted {
 	animation-name: highlight;
     animation-duration: 1s;
@@ -321,6 +325,8 @@ var lobby = [];
 var team_size = 6;
 var region = "eu";
 var current_player_edit = "";
+var team1_captain = "";
+var team2_captain = "";
 
 // variables for recursive team balancer
 var balance_team_combinations = [];
@@ -537,7 +543,9 @@ function draw_player( player_struct, team_id ) {
 	var new_player_item = document.createElement("div");
 	new_player_item.className = "cell player-item";
 	new_player_item.id = player_struct.id;
-	new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
+	if( ! player_struct.empty) {
+		new_player_item.title = player_struct.id + "\nLevel: " + player_struct.level;
+	}
 	if ( Array.isArray(player_struct.top_heroes) ) {
 		new_player_item.title += "\nTop heroes: ";
 		for( i=0; i<player_struct.top_heroes.length; i++ ) {
@@ -557,6 +565,18 @@ function draw_player( player_struct, team_id ) {
 	new_player_item.ondblclick = function(event){player_dblClick(event);};
 	new_player_item.oncontextmenu = function(event){player_contextmenu(event);};
 	new_player_item_row.appendChild(new_player_item);
+	
+	// captain mark
+	var team_captain = "";
+	if ( team_id == "team1") {
+		team_captain = team1_captain;
+	} else {
+		team_captain = team2_captain;
+	}
+	if( (player_struct.empty !== true) && (player_struct.id == team_captain) ) {
+		new_player_item.classList.add("team-captain");
+		new_player_item.title = "Team captain\n"+new_player_item.title;
+	}
 	
 	// rank icon
 	var player_icon = document.createElement("div");
@@ -980,6 +1000,10 @@ function player_drop(ev) {
 			target_team = team2;
 			target_index = team2.length;
 		}
+		
+		if ( dragged_team == target_team ) {
+			target_index = target_team.length - 1;
+		}
 	}
 	
 	if ((target_team == lobby) && (dragged_team != lobby)) {
@@ -1004,6 +1028,8 @@ function player_drop(ev) {
 		// replace target with dragged player
 		target_team[target_index] = dragged_player;
 	}
+	
+	update_captains();
 	
 	redraw_teams();
 }
@@ -1062,6 +1088,8 @@ function player_dblClick(ev) {
 	selected_player_team1 = "";
 	selected_player_team2 = "";
 	
+	update_captains();
+	
 	redraw_teams();
 }
 
@@ -1091,9 +1119,29 @@ function swap_players() {
 	selected_player_team1 = "";
 	selected_player_team2 = "";
 	
+	update_captains();
+	
 	redraw_teams();
 	
 	document.getElementById("swap_btn").disabled = true;
+}
+
+function update_captains() {
+	if ( ! document.getElementById("balance_enable_captains").checked ) {
+		return;
+	}
+	
+	if ( team1.length > 0 ) {
+		team1_captain = team1[0].id;
+	} else {
+		team1_captain = "";
+	}
+	
+	if ( team2.length > 0 ) {
+		team2_captain = team2[0].id;
+	} else {
+		team2_captain = "";
+	}
 }
 
 
@@ -1104,12 +1152,14 @@ function swap_players() {
 function move_team_to_lobby(team) {
 	lobby = lobby.concat(team);
 	team.splice( 0, team.length );
+	update_captains();
 }
 
 function clear_team( team ) {
 	if( confirm("Clear team?") ) {
 		team.splice( 0, team.length );
 	}
+	update_captains();
 }
 
 function sort_team( team, sort_field = 'sr' ) {
@@ -1122,6 +1172,25 @@ function sort_team( team, sort_field = 'sr' ) {
 				return player2[sort_field] - player1[sort_field];
 			}
 		} );
+
+	// move captains back to index 0
+	if ( document.getElementById("balance_enable_captains").checked && (team != lobby) ) {
+		var captain_id = "";
+		if ( team == team1 ) {
+			captain_id = team1_captain;
+		} else {
+			captain_id = team2_captain;
+		}
+		var captain_index = -1;
+		for (i=0; i<team.length; i++) {
+			if (team[i].id == captain_id) {
+				captain_index = i;
+				break;
+			}
+		}
+		var captain = team.splice(captain_index, 1)[0];
+		team.splice( 0, 0, captain );
+	}
 }
 
 function update_teams_sr() {
@@ -1291,6 +1360,32 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 			}
 		}
 	}
+	
+	if ( document.getElementById("balance_enable_captains").checked ) {
+		// captains must stay in their teams
+		var captain1_found = false;
+		for( p in temp_team1) {
+			if (temp_team1[p].id == team1_captain) {
+				captain1_found = true;
+				break;
+			}
+		}
+		if ( ! captain1_found ) {
+			return false;
+		}
+		
+		var captain2_found = false;
+		for( p in temp_team2) {
+			if (temp_team2[p].id == team2_captain) {
+				captain2_found = true;
+				break;
+			}
+		}
+		if ( ! captain2_found ) {
+			return false;
+		}
+	}
+	
 	return true;
 }
 
@@ -1510,6 +1605,8 @@ function add_player_success() {
 	document.getElementById("add_btn").disabled = false;
 	document.getElementById("add_btn").innerHTML = "add player";
 	
+	update_captains();
+	
 	redraw_teams();
 	
 	// show and highlight new player
@@ -1583,6 +1680,7 @@ function import_lobby() {
 					added_players.push( import_struct.players[i].id );
 				}
 				
+				update_captains();
 				redraw_teams();
 			}
 			catch(err) {
@@ -1608,6 +1706,8 @@ function import_lobby() {
 				players_for_update.push( new_player );
 				added_players.push( new_player.id );
 			}
+			
+			update_captains();
 			redraw_teams();
 			
 			// get stats for added players
@@ -1704,6 +1804,23 @@ function restore_team( team, team_name ) {
 	}
 }
 
+function enable_captains_change() {
+	var captains_enabled = document.getElementById("balance_enable_captains").checked;
+	if (captains_enabled) {
+		// mark first players as captains
+		if (team1.length > 0 ) {
+			team1_captain = team1[0].id;
+		}
+		if (team2.length > 0 ) {
+			team2_captain = team2[0].id;
+		}
+	} else {
+		team1_captain = "";
+		team2_captain = "";
+	}
+
+	redraw_teams();
+}
 
 /*
 *		Popup dialog
@@ -2046,6 +2163,10 @@ Region
 					
 					<input type="checkbox" id="balance_separate_otps" onchange="save_settings_value(this);">
 					<label for="balance_separate_otps">Do not place similar one-trick ponies into same team</label>
+					</br>
+					
+					<input type="checkbox" id="balance_enable_captains" onchange="enable_captains_change(); save_settings_value(this);">
+					<label for="balance_enable_captains">Enable team captains</label>
 				</div>
 			</div>
 			
@@ -2212,6 +2333,7 @@ var settings_list = [
 	"balance_adjust_sr_defence",
 	"balance_class_uneveness_value",
 	"balance_separate_otps",
+	"balance_enable_captains",
 	"update_class",
 	"update_sr",
 	"update_edited_fields"
@@ -2246,6 +2368,9 @@ if (document.getElementById("region").value == "" ) {
 update_team_size();
 update_region();
 balance_adjust_sr_change();
+enable_captains_change();
+
+update_captains();
 
 </script>
 
