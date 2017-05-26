@@ -373,8 +373,8 @@ var class_names = [
 var players_for_update = [];
 var total_playets_for_update = 0;
 var min_api_request_interval = 5000; //milliseconds
-var top_class_min_time = 0.25; // fraction of overall time played
-var top_hero_min_time = 0.10; // fraction of overall time played
+var top_class_min_fraction = 0.25; // fraction of overall time played
+var top_hero_max_ratio = 3.0; // ratio of hero playtime to detect top heroes
 
 // OWAPI interface object
 // usage: 
@@ -417,8 +417,10 @@ var OWAPI = {
 						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
 						OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
 						OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
-						OWAPI.top_classes = calculate_top_classes( stats_obj[region].heroes.playtime.competitive );
-						OWAPI.top_heroes = calculate_top_heroes( stats_obj[region].heroes.playtime.competitive );
+						
+						var hero_stats = OWAPI.parseHeroStats( stats_obj[region].heroes );
+						OWAPI.top_classes = OWAPI.calculateTopClasses( hero_stats );
+						OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
 						
 						OWAPI.onSuccess.call();					
 					}
@@ -443,6 +445,78 @@ var OWAPI = {
 		};
 		xhttp.open("GET", "https://owapi.net/api/v3/u/"+this.id+"/blob", true);
 		xhttp.send();
+	},
+	
+	// returns array of objects (hero, playtime) sorted by playtime
+	parseHeroStats: function( heroes_node ) {
+		var hero_playtime = heroes_node.playtime.competitive;
+		
+		var hero_playtime_sorted = [];
+		for (var hero_name in hero_playtime ) {
+			hero_playtime_sorted.push( { hero: hero_name, playtime: Math.round(hero_playtime[hero_name],1)} );
+		}
+		
+		hero_playtime_sorted.sort( function(hero1, hero2) {
+				return hero2.playtime - hero1.playtime;
+			});
+			
+		return hero_playtime_sorted;
+	},
+	
+	// returns top 2 hero classes
+	calculateTopClasses: function calculate_top_classes( hero_playtime ) {
+		var class_playtime = {
+			offence: 0,
+			defence: 0,
+			tank: 0,
+			support: 0
+			};
+		
+		for ( i=0; i<hero_playtime.length; i++ ) {
+			var hero_class = hero_classes[hero_playtime[i].hero];
+			class_playtime[hero_class] += hero_playtime[i].playtime;
+		}
+		
+		var class_playtime_arr = Object.entries(class_playtime);
+		class_playtime_arr.sort( function(item1, item2){
+				return item2[1]-item1[1];	
+			});
+		
+		var top_classes = [];
+		var top_class = class_playtime_arr.shift();
+		if( top_class !== undefined ) {
+			top_classes.push( top_class[0] );
+		}
+		top_class = class_playtime_arr.shift();
+		if( top_class !== undefined ) {
+			if( Number(top_class[1])/this.time_played >= top_class_min_fraction ) {
+				top_classes.push( top_class[0] );
+			}
+		}
+		
+		return top_classes;
+	},
+	
+	// returns top 4 heroes by playtime
+	calculateTopHeroes: function ( hero_playtime ) {
+		var top_heroes = [];
+		if ( hero_playtime.length != 0 ) {
+			top_heroes.push( hero_playtime[0] );
+		}
+		
+		for ( i=1; i<hero_playtime.length; i++ ) {
+			if (  hero_playtime[i-1].playtime / hero_playtime[i].playtime < top_hero_max_ratio ) {
+				top_heroes.push( hero_playtime[i] );
+			} else {
+				break;
+			}
+		}
+			
+		while (top_heroes.length > 4) {
+			top_heroes.pop();
+		}
+		
+		return top_heroes;
 	}
 }
 
@@ -688,68 +762,6 @@ function get_rank_name( sr ) {
 		return "unranked";
 	}
 }
-
-// returns top 2 hero classes
-function calculate_top_classes( hero_playtime ) {
-	var class_playtime = {
-		offence: 0,
-		defence: 0,
-		tank: 0,
-		support: 0
-		};
-	
-	var total_playtime = 0;
-	for (var hero_name in hero_playtime ) {
-		var hero_class = hero_classes[hero_name];
-		class_playtime[hero_class] += hero_playtime[hero_name];
-		total_playtime += hero_playtime[hero_name];
-	}
-	
-	var class_playtime_arr = Object.entries(class_playtime);
-	class_playtime_arr.sort( function(item1, item2){
-			return item2[1]-item1[1];	
-		});
-	
-	var top_classes = [];
-	var top_class = class_playtime_arr.shift();
-	if( top_class !== undefined ) {
-		top_classes.push( top_class[0] );
-	}
-	top_class = class_playtime_arr.shift();
-	if( top_class !== undefined ) {
-		if( Number(top_class[1])/total_playtime >= top_class_min_time ) {
-			top_classes.push( top_class[0] );
-		}
-	}
-	
-	return top_classes;
-}
-
-// returns top 4 heroes by playtime
-function calculate_top_heroes( hero_playtime ) {
-	var total_playtime = 0;
-	for (var hero_name in hero_playtime ) {
-		total_playtime += hero_playtime[hero_name];
-	}
-	
-	var top_heroes = [];
-	for (var hero_name in hero_playtime ) {
-		if ( hero_playtime[hero_name] / total_playtime >= top_hero_min_time ) {
-			top_heroes.push( { hero: hero_name, playtime: Math.round(hero_playtime[hero_name],1)} );
-		}
-	}
-	
-	top_heroes.sort( function(hero1, hero2) {
-			return hero2.playtime - hero1.playtime;
-		});
-		
-	while (top_heroes.length > 4) {
-		top_heroes.pop();
-	}
-	
-	return top_heroes;
-}
-
 
 function calculate_team_sr( team, use_balance_options=false ) {
 	var team_sr = 0;
