@@ -12,14 +12,18 @@ html {
 }
 
 body {
-	margin: 1em;
+	margin: 0.5em;
 	height: 95%;
+}
+
+input[type="text"] {
+	border: 1px solid;
 }
 
 .page-title {
 	font-size: 26pt;
 	display: inline-block;
-	padding-bottom: 0.5em;
+	padding-bottom: 0.3em;
 }
 
 .copyright {
@@ -29,7 +33,7 @@ body {
 
 .team-title {
 	font-size: 20pt;
-	border: none;
+	border: none !important;
 }
 
 .table {
@@ -1574,7 +1578,8 @@ function add_player_success() {
 		top_heroes: OWAPI.top_heroes,
 	};
 	
-	var new_player_team;
+	var new_player_team = lobby;
+	/*
 	var team_selectors = document.getElementsByName("add_team_select");
     for (var i=0; i<team_selectors.length; i++) {
         if (team_selectors[i].checked) {
@@ -1594,10 +1599,12 @@ function add_player_success() {
 		}
 	}
 	
+	
 	// check if team has free slots
 	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
 		new_player_team = lobby;
 	}
+	*/
 	
 	new_player_team.push(new_player);
 	
@@ -2016,8 +2023,9 @@ Region
 
 
 <input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="PlayerName#1234 or PlayerName-1234" value="" onkeyup="new_player_keyup(event);"/> 
-<button onclick="add_player_click();" id="add_btn" >add player</button> to 
-
+<button onclick="add_player_click();" id="add_btn" >add player</button>
+<!--
+ to 
 <input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_lobby" value="lobby">
 <label for="add_team_select_lobby">lobby</label>
 
@@ -2029,8 +2037,8 @@ Region
 
 <input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_auto" value="team_auto" checked>
 <label for="add_team_select_auto">auto team</label>
+-->
 
-<br/>
 <br/>
 
 <div class="table teams">
