@@ -331,6 +331,7 @@ var region = "eu";
 var current_player_edit = "";
 var team1_captain = "";
 var team2_captain = "";
+var url_hash_edited = true; // just to prevent loops
 
 // variables for recursive team balancer
 var balance_team_combinations = [];
@@ -412,8 +413,10 @@ var OWAPI = {
 		this.top_classes = [];
 		this.top_heroes = [];
 		
-		this.id = this.id.trim().replace("#", "-");
-		this.display_name = this.id.slice( 0, this.id.search("-") );
+		//this.id = this.id.trim().replace("#", "-");
+		this.id = format_player_id( this.id );
+		//this.display_name = this.id.slice( 0, this.id.search("-") );
+		this.display_name = format_player_name( this.id );
 	
 		var xhttp = new XMLHttpRequest();
 		xhttp.onreadystatechange = function() {
@@ -653,7 +656,7 @@ function draw_player( player_struct, team_id ) {
 	team_list.appendChild(new_player_item_row);
 }
 
-function redraw_teams() {
+function redraw_teams( update_hash = true ) {
 	document.getElementById("team1").innerHTML = "";
 	document.getElementById("team2").innerHTML = "";
 	document.getElementById("lobby").innerHTML = "";
@@ -685,6 +688,11 @@ function redraw_teams() {
 	update_teams_sr();
 	
 	save_players_list();
+	
+	if (update_hash)  {
+		location.hash = generate_setup_url();
+		url_hash_edited = false; // do not loop redraws with event listener
+	}
 }
 
 function collapse_group( header ) {
@@ -780,7 +788,7 @@ function get_rank_name( sr ) {
 		return "diamond";
 	} else if ( sr < 4000 ) {
 		return "master";
-	} else if ( sr < 5000 ) {
+	} else if ( sr <= 5000 ) {
 		return "grandmaster";
 	} else {
 		return "unranked";
@@ -1057,14 +1065,8 @@ function player_dblClick(ev) {
 	}
 	
 	// find index in team for player
-	var selected_index;
-	var selected_player;
-	for( var i=0; i<selected_team.length; i++) {
-		if ( selected_id == selected_team[i].id) {
-			selected_index = i;
-			selected_player = selected_team[i];
-		}
-	}
+	var selected_index = get_player_index( selected_id, selected_team );
+	var selected_player = selected_team[selected_index];
 	
 	// detect target team
 	var new_team;
@@ -1098,7 +1100,13 @@ function player_dblClick(ev) {
 }
 
 function swap_players() {
-	var player1;
+	var player1_index = get_player_index( selected_player_team1, team1 );
+	var player1 = team1[player1_index];
+	
+	var player2_index = get_player_index( selected_player_team2, team2 );
+	var player2 = team2[player2_index];
+
+	/*var player1;
 	var player1_index;
 	for( var i=0; i<team1.length; i++) {
 		if (team1[i].id == selected_player_team1) {
@@ -1115,7 +1123,7 @@ function swap_players() {
 			player2_index = i;
 			break;
 		}
-	}
+	}*/
 	
 	team1[player1_index] = player2;
 	team2[player2_index] = player1;
@@ -1185,13 +1193,14 @@ function sort_team( team, sort_field = 'sr' ) {
 		} else {
 			captain_id = team2_captain;
 		}
-		var captain_index = -1;
+		var captain_index = get_player_index( captain_id, team );
+		/*var captain_index = -1;
 		for (i=0; i<team.length; i++) {
 			if (team[i].id == captain_id) {
 				captain_index = i;
 				break;
 			}
-		}
+		}*/
 		var captain = team.splice(captain_index, 1)[0];
 		team.splice( 0, 0, captain );
 	}
@@ -1367,7 +1376,7 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 	
 	if ( document.getElementById("balance_enable_captains").checked ) {
 		// captains must stay in their teams
-		var captain1_found = false;
+		/*var captain1_found = false;
 		for( p in temp_team1) {
 			if (temp_team1[p].id == team1_captain) {
 				captain1_found = true;
@@ -1376,9 +1385,13 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 		}
 		if ( ! captain1_found ) {
 			return false;
+		}*/
+		var captain1_index = get_player_index( team1_captain, temp_team1 );
+		if ( captain1_index == -1) {
+			return false;
 		}
 		
-		var captain2_found = false;
+		/*var captain2_found = false;
 		for( p in temp_team2) {
 			if (temp_team2[p].id == team2_captain) {
 				captain2_found = true;
@@ -1386,6 +1399,11 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 			}
 		}
 		if ( ! captain2_found ) {
+			return false;
+		}*/
+		
+		var captain2_index = get_player_index( team2_captain, temp_team2 );
+		if ( captain2_index == -1) {
 			return false;
 		}
 	}
@@ -1524,10 +1542,10 @@ function balance_teams() {
 
 function add_player_click() {
 	var player_id = document.getElementById("new_player_id").value;
-	player_id = player_id.trim().replace("#", "-");
+	player_id = format_player_id( player_id );
 	
 	// check duplicates
-	var is_duplicate = false;
+	/*var is_duplicate = false;
 	for( var i=0; i<team1.length; i++) {
 		if( team1[i].id == player_id) {
 			is_duplicate = true;
@@ -1552,7 +1570,9 @@ function add_player_click() {
 		}
 	}
 	
-	if ( is_duplicate ) {
+	if ( is_duplicate ) {*/
+	
+	if ( find_player_by_id(player_id) !== undefined ) {
 		alert("Player already added");
 		document.getElementById(player_id).classList.toggle("player-highlighted", true);
 		setTimeout( reset_highlighted_players , 2000);
@@ -1578,35 +1598,7 @@ function add_player_success() {
 		top_heroes: OWAPI.top_heroes,
 	};
 	
-	var new_player_team = lobby;
-	/*
-	var team_selectors = document.getElementsByName("add_team_select");
-    for (var i=0; i<team_selectors.length; i++) {
-        if (team_selectors[i].checked) {
-			if (team_selectors[i].value == "team1") {
-				new_player_team = team1;
-			} else if (team_selectors[i].value == "team2") {
-				new_player_team = team2;
-			} else if (team_selectors[i].value == "lobby") {
-				new_player_team = lobby;
-			} else { // auto team
-				if (team1.length < team_size) {
-					new_player_team = team1;
-				} else {
-					new_player_team = team2;
-				}
-			}
-		}
-	}
-	
-	
-	// check if team has free slots
-	if ( (new_player_team != lobby) && (new_player_team.length >= team_size) ) {
-		new_player_team = lobby;
-	}
-	*/
-	
-	new_player_team.push(new_player);
+	lobby.push(new_player);
 	
 	document.getElementById("new_player_id").value = "";
 	document.getElementById("add_btn").disabled = false;
@@ -1698,9 +1690,8 @@ function import_lobby() {
 		} else if (document.getElementById("dlg_format_value").value == "battletags") {
 			var battletag_list = import_str.trim().split("\n");
 			for( i in battletag_list ) {
-				var player_id = battletag_list[i].trim();
-				player_id = player_id.trim().replace("#", "-");
-				var player_name = player_id.slice( 0, player_id.search("-") );
+				var player_id = format_player_id( battletag_list[i] );
+				var player_name = format_player_name( player_id );		
 				var new_player = {
 						id: player_id,
 						display_name: player_name, 
@@ -1748,6 +1739,97 @@ function change_export_format() {
 	document.getElementById("dlg_textarea").value = export_str.trim();
 }
 
+// returns string representing current team setup
+// to generate shareable link. String contains base64-encoded JSON structure.
+// Only battletags and SR values are exported
+function generate_setup_url() {
+	if ( (team1.length==0) && (team2.length==0) ) {
+		return "";
+	}
+
+	var temp_team1 = [];
+	for( i=0; i<team1.length; i++ ) {
+		temp_team1.push(
+			{
+				id: team1[i].id,
+				sr: team1[i].sr
+			}
+		);
+	};
+	
+	var temp_team2 = [];
+	for( i=0; i<team2.length; i++ ) {
+		temp_team2.push(
+			{
+				id: team2[i].id,
+				sr: team2[i].sr
+			}
+		);
+	}
+	
+	var setup = {
+		size: team_size,
+		team1: temp_team1,
+		team2: temp_team2
+	};
+	
+	var setup_str = b64EncodeUnicode( JSON.stringify(setup) );
+	
+	return setup_str;
+}
+
+function load_team_setup( source, dest ) {
+	for(i=0; i<source.length; i++) {
+		// check duplicates
+		if ( get_player_index( source[i].id, team1 ) != -1 ) {
+			throw "Duplicate player";
+		}
+		if ( get_player_index( source[i].id, team2 ) != -1 ) {
+			throw "Duplicate player";
+		}
+	
+		var p_index = get_player_index( source[i].id, lobby );
+		if ( p_index != -1 ) {
+			// player already exists, move from lobby to team
+			var selected_player = lobby[p_index];
+			dest.push( selected_player );
+			lobby.splice(p_index, 1);
+		} else {
+			// player not found, add new
+			var new_player = new Object();
+			new_player.id = format_player_id( source[i].id );
+			new_player.sr = Number(source[i].sr);
+			new_player.display_name = format_player_name( new_player.id );
+			new_player.top_classes = [];
+			new_player.top_heroes = [];
+			dest.push( new_player );
+		}
+	}
+}
+
+function load_setup_url( setup_str ) {
+	try {
+		var setup = JSON.parse( b64DecodeUnicode( setup_str ) );
+		if ( setup.team1 === undefined ) {
+			throw 1;
+		}
+		team_size = Number( setup.size );
+		document.getElementById("team_size").value = team_size;
+		localStorage.setItem("team_size", team_size);
+		
+		move_team_to_lobby(team1);
+		move_team_to_lobby(team2);
+		
+		load_team_setup( setup.team1, team1 );
+		load_team_setup( setup.team2, team2 );
+	}
+	catch(err) {
+		alert("Incorrect URL format");
+		return;
+	}
+	
+	redraw_teams( false );
+}
 
 /*
 *		Settings functions
@@ -2002,6 +2084,46 @@ function fill_test_teams() {
 	setTimeout( function() {highlight_players( added_players );}, 500 );
 }
 
+function get_player_index( player_id, team ) {
+	for( var i=0; i<team.length; i++) {
+		if ( player_id == team[i].id) {
+			return i;
+		}
+	}
+	
+	return -1;
+}
+
+function b64EncodeUnicode(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+    }));
+}
+
+function b64DecodeUnicode(str) {
+    return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+}
+
+function format_player_id( id ) {
+	return id.trim().replace("#", "-");
+}
+
+function format_player_name( id ) {
+	return id.slice( 0, id.search("-") );
+}
+
+function on_hash_change() {
+	if ( (location.hash.length >= 32) && url_hash_edited ) {
+		load_setup_url( location.hash.substr(1) );
+	} else {
+		// hash was updated by code, no need to redraw. Reset flag
+		url_hash_edited = true;
+	}
+}
+
 </script>
 </head>
 <body >
@@ -2024,21 +2146,6 @@ Region
 
 <input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="BattleTag" value="" onkeyup="new_player_keyup(event);"/> 
 <button onclick="add_player_click();" id="add_btn" >add player</button>
-<!--
- to 
-<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_lobby" value="lobby">
-<label for="add_team_select_lobby">lobby</label>
-
-<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_team1" value="team_1">
-<label for="add_team_select_team1">team 1</label> 
-
-<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_team2" value="team_2">
-<label for="add_team_select_team2">team 2</label> 
-
-<input class="team-selecor" type="radio" name="add_team_select" id="add_team_select_auto" value="team_auto" checked>
-<label for="add_team_select_auto">auto team</label>
--->
-
 <br/>
 
 <div class="table teams">
@@ -2097,14 +2204,14 @@ Region
 			
 			<br/>
 			<div >
-			<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams" title="Automatically find most balanced compositions"/>
-			<br/>
-			<br/>
-			<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats" title="Update stats for all players"/>
-			
-			<br/>
-			<br/>
-			<input class="big-btn" type="button" onclick="fill_test_teams();" value="Generate random players"/>
+				<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams" title="Automatically find most balanced compositions"/>
+				<br/>
+				<br/>
+				<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats" title="Update stats for all players"/>
+				
+				<br/>
+				<br/>
+				<input class="big-btn" type="button" onclick="fill_test_teams();" value="Generate random players"/>
 			</div>
 		</div>
 		
@@ -2221,6 +2328,7 @@ Region
 					</li>
 					<li>Click 'Balance teams' again to look through best balance variants</li>
 					<li>Team captains (if enabled) will not be moved by autobalancer</li>
+					<li>Page URL contains current team setup and can be shared</li>
 				</ul> 
 			</div>
 		</div>
@@ -2326,7 +2434,11 @@ Balance debug settings <br/>
 restore_team( lobby, "" );
 restore_team( team1, "_team1" );
 restore_team( team2, "_team2" );
-redraw_teams();
+if (location.hash.length >= 32 ) {
+	load_setup_url( location.hash.substr(1) );
+} else {
+	redraw_teams();
+}
 
 // restore settings and team names
 var settings_list = [
@@ -2377,8 +2489,9 @@ update_team_size();
 update_region();
 balance_adjust_sr_change();
 enable_captains_change();
-
 update_captains();
+
+window.addEventListener("hashchange", on_hash_change, false);
 
 </script>
 
