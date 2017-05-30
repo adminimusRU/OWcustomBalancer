@@ -11,6 +11,7 @@ Tool for balancing teams in Overwatch custom games.
     * Option to mark players as team captains (will not be moved by balancer);
     * Option to handle one-trick ponies;
   * Automatic calculation of team's average SR for manual balancing;
+  * Page URL contains current team setup and can be shared;
   * New players added by BattleTag, all stats (current competitive SR, level, most played heroes and roles/classes) are automatically acquired via [OWAPI](https://github.com/SunDwarf/OWAPI);
   * Lobby used to store any amount of players (limited only by browser storage size);
   * Player list import and export in JSON (with stats) and plain text (only BattleTags) formats;
