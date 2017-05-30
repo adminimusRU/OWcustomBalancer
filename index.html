@@ -1106,25 +1106,6 @@ function swap_players() {
 	var player2_index = get_player_index( selected_player_team2, team2 );
 	var player2 = team2[player2_index];
 
-	/*var player1;
-	var player1_index;
-	for( var i=0; i<team1.length; i++) {
-		if (team1[i].id == selected_player_team1) {
-			player1 = team1[i];
-			player1_index = i;
-			break;
-		}
-	}
-	var player2;
-	var player2_index;
-	for( var i=0; i<team2.length; i++) {
-		if (team2[i].id == selected_player_team2) {
-			player2 = team2[i];
-			player2_index = i;
-			break;
-		}
-	}*/
-	
 	team1[player1_index] = player2;
 	team2[player2_index] = player1;
 	
@@ -1194,13 +1175,6 @@ function sort_team( team, sort_field = 'sr' ) {
 			captain_id = team2_captain;
 		}
 		var captain_index = get_player_index( captain_id, team );
-		/*var captain_index = -1;
-		for (i=0; i<team.length; i++) {
-			if (team[i].id == captain_id) {
-				captain_index = i;
-				break;
-			}
-		}*/
 		var captain = team.splice(captain_index, 1)[0];
 		team.splice( 0, 0, captain );
 	}
@@ -1376,31 +1350,10 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 	
 	if ( document.getElementById("balance_enable_captains").checked ) {
 		// captains must stay in their teams
-		/*var captain1_found = false;
-		for( p in temp_team1) {
-			if (temp_team1[p].id == team1_captain) {
-				captain1_found = true;
-				break;
-			}
-		}
-		if ( ! captain1_found ) {
-			return false;
-		}*/
 		var captain1_index = get_player_index( team1_captain, temp_team1 );
 		if ( captain1_index == -1) {
 			return false;
 		}
-		
-		/*var captain2_found = false;
-		for( p in temp_team2) {
-			if (temp_team2[p].id == team2_captain) {
-				captain2_found = true;
-				break;
-			}
-		}
-		if ( ! captain2_found ) {
-			return false;
-		}*/
 		
 		var captain2_index = get_player_index( team2_captain, temp_team2 );
 		if ( captain2_index == -1) {
@@ -1545,33 +1498,6 @@ function add_player_click() {
 	player_id = format_player_id( player_id );
 	
 	// check duplicates
-	/*var is_duplicate = false;
-	for( var i=0; i<team1.length; i++) {
-		if( team1[i].id == player_id) {
-			is_duplicate = true;
-			break;
-		}
-	}
-	if ( ! is_duplicate ) {
-		for( var i=0; i<team2.length; i++) {
-			if( team2[i].id == player_id) {
-				is_duplicate = true;
-				break;
-			}
-		}
-	}
-	if ( ! is_duplicate ) {
-		for( var i=0; i<lobby.length; i++) {
-			if( lobby[i].id == player_id) {
-				is_duplicate = true;
-				document.getElementById(player_id).scrollIntoView( false );
-				break;
-			}
-		}
-	}
-	
-	if ( is_duplicate ) {*/
-	
 	if ( find_player_by_id(player_id) !== undefined ) {
 		alert("Player already added");
 		document.getElementById(player_id).classList.toggle("player-highlighted", true);
