@@ -1647,15 +1647,19 @@ function import_lobby() {
 			redraw_teams();
 			
 			// get stats for added players
-			total_playets_for_update = players_for_update.length;
-			toggle_owapi_buttons( false );
-			document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
-			update_next_player_stats();
+			if (added_players.length > 0) {
+				total_playets_for_update = players_for_update.length;
+				toggle_owapi_buttons( false );
+				document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+				update_next_player_stats();
+			}
 		}
 		
 		// highlight all new players and scroll to show last one
-		setTimeout( function() {document.getElementById( added_players[added_players.length-1] ).scrollIntoView(false);}, 100 );
-		setTimeout( function() {highlight_players( added_players );}, 500 );
+		if (added_players.length > 0) {
+			setTimeout( function() {document.getElementById( added_players[added_players.length-1] ).scrollIntoView(false);}, 100 );
+			setTimeout( function() {highlight_players( added_players );}, 500 );
+		}
 	}
 }
 
