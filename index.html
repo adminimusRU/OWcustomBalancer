@@ -1507,8 +1507,9 @@ function add_player_click() {
 	// check duplicates
 	if ( find_player_by_id(player_id) !== undefined ) {
 		alert("Player already added");
-		document.getElementById(player_id).classList.toggle("player-highlighted", true);
-		setTimeout( reset_highlighted_players , 2000);
+		/*document.getElementById(player_id).classList.toggle("player-highlighted", true);*/
+		setTimeout( function() {document.getElementById(player_id).scrollIntoView(false);}, 100 );
+		setTimeout( function() {highlight_player( player_id );}, 500 );
 		return;
 	}
 	
