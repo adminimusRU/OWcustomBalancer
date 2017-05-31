@@ -1,1 +1,3 @@
-...
+* export team setup as text / image
+* disable all OWAPI-related buttons while fetching stats
+* add timeout before enabling "add player" button again
