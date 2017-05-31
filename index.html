@@ -1625,6 +1625,10 @@ function import_lobby() {
 			var battletag_list = import_str.trim().split("\n");
 			for( i in battletag_list ) {
 				var player_id = format_player_id( battletag_list[i] );
+				// check duplicates
+				if (find_player_by_id(player_id) !== undefined ) {
+					continue;
+				}
 				var player_name = format_player_name( player_id );		
 				var new_player = {
 						id: player_id,
