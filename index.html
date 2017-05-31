@@ -732,7 +732,9 @@ function lobby_filter_change() {
 function new_player_keyup(ev) {
 	ev.preventDefault();
     if (ev.keyCode == 13) { //enter pressed
-        add_player_click();
+		if ( ! document.getElementById("add_btn").disabled ) {
+			add_player_click();
+		}
     }
 }
 
@@ -754,6 +756,13 @@ function reset_highlighted_players() {
 	for( i=0; i<elems.length; i++ ) {
 		elems[i].classList.toggle("player-highlighted", false);
 	}
+}
+
+// disabled or enables all buttons related to fetching stats
+function toggle_owapi_buttons( button_enabled=true ) {
+	document.getElementById("add_btn").disabled = ( ! button_enabled );
+	document.getElementById("update_stats_btn").disabled = ( ! button_enabled );
+	document.getElementById("dlg_update_player_stats").disabled = ( ! button_enabled );
 }
 
 /*
@@ -822,8 +831,7 @@ function update_next_player_stats( ) {
 	} else {
 		// all players updated
 		alert("All stats updated");
-		document.getElementById("update_stats_btn").disabled = false;
-		document.getElementById("dlg_update_player_stats").disabled = false;
+		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 		document.getElementById("update_stats_btn").value = "↻ Update stats";
 		redraw_teams();
 		fill_player_stats_dlg();
@@ -861,8 +869,7 @@ function update_player_fail( msg ) {
 	if( confirm( "Error on updating player "+OWAPI.id+": "+msg+". Continue updating stats?" ) ) {
 		setTimeout( update_next_player_stats, min_api_request_interval );
 	} else {
-		document.getElementById("update_stats_btn").disabled = false;
-		document.getElementById("dlg_update_player_stats").disabled = false;
+		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 		document.getElementById("update_stats_btn").value = "↻ Update stats";
 		redraw_teams();
 	}
@@ -878,7 +885,7 @@ function update_all_stats() {
 		return;
 	};
 
-	document.getElementById("update_stats_btn").disabled = true;
+	toggle_owapi_buttons( false );
 	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
@@ -1266,8 +1273,7 @@ function update_current_player_stats() {
 	players_for_update.push( player_struct );
 	total_playets_for_update = players_for_update.length;
 	
-	document.getElementById("update_stats_btn").disabled = true;
-	document.getElementById("dlg_update_player_stats").disabled = true;
+	toggle_owapi_buttons( false );
 	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
@@ -1505,7 +1511,7 @@ function add_player_click() {
 		return;
 	}
 	
-	document.getElementById("add_btn").disabled = true;
+	toggle_owapi_buttons(false);
 	document.getElementById("add_btn").innerHTML = "processing...";
 	
 	OWAPI.id = player_id;
@@ -1527,7 +1533,7 @@ function add_player_success() {
 	lobby.push(new_player);
 	
 	document.getElementById("new_player_id").value = "";
-	document.getElementById("add_btn").disabled = false;
+	setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 	document.getElementById("add_btn").innerHTML = "add player";
 	
 	update_captains();
@@ -1540,7 +1546,7 @@ function add_player_success() {
 }
 
 function add_player_fail( msg ) {
-	document.getElementById("add_btn").disabled = false;
+	setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 	document.getElementById("add_btn").innerHTML = "add player";
 	alert( msg );
 }
@@ -1636,7 +1642,7 @@ function import_lobby() {
 			
 			// get stats for added players
 			total_playets_for_update = players_for_update.length;
-			document.getElementById("update_stats_btn").disabled = true;
+			toggle_owapi_buttons( false );
 			document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 			update_next_player_stats();
 		}
