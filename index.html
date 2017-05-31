@@ -763,6 +763,7 @@ function toggle_owapi_buttons( button_enabled=true ) {
 	document.getElementById("add_btn").disabled = ( ! button_enabled );
 	document.getElementById("update_stats_btn").disabled = ( ! button_enabled );
 	document.getElementById("dlg_update_player_stats").disabled = ( ! button_enabled );
+	document.getElementById("import_lobby_btn").disabled = ( ! button_enabled );
 }
 
 /*
@@ -2085,7 +2086,7 @@ Region
 		<div class="cell">
 			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
-			<input title="Import lobby" type="button" class="team_btn" onclick="import_lobby_dlg();" value="Import"/>
+			<input title="Import lobby" id="import_lobby_btn" type="button" class="team_btn" onclick="import_lobby_dlg();" value="Import"/>
 			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby();" value="Export"/>
 			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
 			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_team(lobby, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
