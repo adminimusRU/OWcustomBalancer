@@ -1785,7 +1785,8 @@ function setup_share_dlg() {
 	init_popup_dlg();
 	document.getElementById("popup_dlg").style.display = "block";
 	document.getElementById("dlg_title").innerHTML = "Share current team setup";
-	document.getElementById("dlg_setup_share_format").style.display = "block";
+	document.getElementById("dlg_setup_share").style.display = "block";
+	document.getElementById("dlg_setup_share_options").style.display = "block";
 	//document.getElementById("dlg_setup_value").value = "text-list";
 	//document.getElementById("dlg_setup_value").onchange = function(event){change_setup_format();};
 	document.getElementById("dlg_textarea").style.display = "inline";
@@ -1799,15 +1800,37 @@ function setup_share_dlg() {
 
 function change_setup_format() {
 	var setup_str = "";
-	var format = document.getElementById("dlg_setup_value").value;
+	var format = document.getElementById("dlg_setup_format").value;
+	var include_sr = document.getElementById("dlg_setup_share_sr").checked;
+	var include_class = document.getElementById("dlg_setup_share_classes").checked;
 	if ( format == "text-list" ) {
 		setup_str += document.getElementById("team1_name").value + "\n";
+		if (include_sr) {
+			setup_str += document.getElementById("team1_sr").innerHTML + " avg. SR\n";
+		}
 		for (i=0; i<team1.length; i++) {
-			setup_str += team1[i].display_name + "\n";
+			setup_str += team1[i].display_name;
+			if (include_sr) {
+				setup_str += " - " + team1[i].sr + " SR";
+			}
+			if (include_class) {
+				setup_str += " - " + team1[i].top_classes.toString();
+			}
+			setup_str += "\n"
 		}
 		setup_str += document.getElementById("team2_name").value + "\n";
+		if (include_sr) {
+			setup_str += document.getElementById("team2_sr").innerHTML + " avg. SR\n";
+		}
 		for (i=0; i<team2.length; i++) {
-			setup_str += team2[i].display_name + "\n";
+			setup_str += team2[i].display_name;
+			if (include_sr) {
+				setup_str += " - " + team2[i].sr + " SR";
+			}
+			if (include_class) {
+				setup_str += " - " + team2[i].top_classes.toString();
+			}
+			setup_str += "\n"
 		}
 	} else if ( (format == "text-table") || (format == "markdown-code-block") ) {
 		// detect max width of columns
@@ -1826,42 +1849,140 @@ function change_setup_format() {
 		}
 		column2_width = Math.max( 3, column2_width );
 		
+		var sr_col_width = 7;
+		var class_col_width = 15;
+		
 		if (format == "markdown-code-block") {
 			setup_str += "```\n";
 		}
-		setup_str += "|"+ str_padding( document.getElementById("team1_name").value, column1_width ) + "|";
-		setup_str += str_padding( document.getElementById("team2_name").value, column2_width ) + "|\n";
-		setup_str += "|"+ str_padding( "", column1_width,"-" ) + "|";
-		setup_str += str_padding( "", column2_width,"-" ) + "|\n";
+		if (include_sr) {
+			setup_str += "|"+ str_padding(document.getElementById("team1_sr").innerHTML + " SR", sr_col_width);
+		}
+		setup_str += "|"+ str_padding( document.getElementById("team1_name").value, column1_width );
+		if (include_class) {
+			setup_str += "|" + str_padding("", class_col_width);
+		}
+		
+		if (include_sr) {
+			setup_str += "|" +str_padding(document.getElementById("team2_sr").innerHTML + " SR", sr_col_width);
+		}
+		setup_str += "|" + str_padding( document.getElementById("team2_name").value, column2_width );
+		if (include_class) {
+			setup_str += "|" + str_padding("", class_col_width);
+		}
+		setup_str += "|\n"
+		
+		if (include_sr) {
+			setup_str += "|"+ str_padding( "", sr_col_width,"-" ) ;
+		}
+		setup_str += "|"+ str_padding( "", column1_width,"-" ) ;
+		if (include_class) {
+			setup_str += "|" + str_padding("", class_col_width, "-");
+		}
+		if (include_sr) {
+			setup_str += "|"+ str_padding( "", sr_col_width,"-" ) ;
+		}
+		setup_str += "|" +str_padding( "", column2_width,"-" );
+		if (include_class) {
+			setup_str += "|" + str_padding("", class_col_width, "-");
+		}
+		setup_str += "|\n"
+		
 		for (i=0; i<team_size; i++) {
 			setup_str += "|";
-			var col_value = "";
+			var player_name = "";
+			var player_sr = "";
+			var player_class = "";
 			if ( i < team1.length ) {
-				col_value = team1[i].display_name;
+				player_name = team1[i].display_name;
+				player_sr = String(team1[i].sr);
+				player_class = team1[i].top_classes.toString();
 			}
-			setup_str += str_padding( col_value, column1_width )+"|";
-			col_value = "";
+			if (include_sr) {
+				setup_str += str_padding( player_sr, sr_col_width )+"|";
+			}
+			setup_str += str_padding( player_name, column1_width )+"|";
+			if (include_class) {
+				setup_str += str_padding(player_class, class_col_width)+"|";
+			}
+			
+			player_name = "";
+			player_sr = "";
+			player_class = "";
 			if ( i < team2.length ) {
-				col_value = team2[i].display_name;
+				player_name = team2[i].display_name;
+				player_sr = String(team2[i].sr);
+				player_class = team2[i].top_classes.toString();
 			}
-			setup_str += str_padding( col_value, column2_width )+"|\n";
+			if (include_sr) {
+				setup_str += str_padding( player_sr, sr_col_width )+"|";
+			}
+			setup_str += str_padding( player_name, column2_width )+"|";
+			if (include_class) {
+				setup_str += str_padding(player_class, class_col_width)+"|";
+			}
+			setup_str += "\n"
 		}
 		if (format == "markdown-code-block") {
 			setup_str += "```\n";
 		}
 	} else if ( format == "html-table" ) {
 		setup_str += "<table>\n";
-		setup_str += "\t<tr><td>"+document.getElementById("team1_name").value+"</td><td>"+document.getElementById("team2_name").value+"</td></tr>\n";
+		setup_str += "\t<tr>"
+		if (include_sr) {
+			setup_str += "<td>"+document.getElementById("team1_sr").innerHTML + " avg. SR</td>";
+		}
+		setup_str += "<td>"+document.getElementById("team1_name").value+"</td>";
+		if (include_class) {
+			setup_str += "<td></td>";
+		}
+		
+		if (include_sr) {
+			setup_str += "<td>"+document.getElementById("team2_sr").innerHTML + " avg. SR</td>";
+		}
+		setup_str += "<td>"+document.getElementById("team2_name").value+"</td>"
+		if (include_class) {
+			setup_str += "<td></td>";
+		}
+		setup_str += "</tr>\n";
+		
+		
 		for (i=0; i<team_size; i++) {
-			setup_str += "\t<tr><td>";
+			setup_str += "\t<tr>";
+			
+			var player_name = "";
+			var player_sr = "";
+			var player_class = "";
 			if ( i < team1.length ) {
-				setup_str += team1[i].display_name;
+				player_name = team1[i].display_name;
+				player_sr = String(team1[i].sr);
+				player_class = team1[i].top_classes.toString();
 			}
-			setup_str += "</td><td>";
+			if (include_sr) {
+				setup_str += "<td>"+player_sr+"</td>";
+			}
+			setup_str += "<td>"+player_name+"</td>";
+			if (include_class) {
+				setup_str += "<td>"+player_class+"</td>";
+			}
+			
+			player_name = "";
+			player_sr = "";
+			player_class = "";
 			if ( i < team2.length ) {
-				setup_str += team2[i].display_name;
+				player_name = team2[i].display_name;
+				player_sr = String(team2[i].sr);
+				player_class = team2[i].top_classes.toString();
 			}
-			setup_str += "</td></tr>\n";
+			if (include_sr) {
+				setup_str += "<td>"+player_sr+"</td>";
+			}
+			setup_str += "<td>"+player_name+"</td>";
+			if (include_class) {
+				setup_str += "<td>"+player_class+"</td>";
+			}
+			
+			setup_str += "</tr>\n";
 		}
 		setup_str += "</table>";
 	}
@@ -1957,7 +2078,8 @@ function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_import_export_format").style.display = "none";
 	document.getElementById("dlg_format_value").onchange = function(event){;};
-	document.getElementById("dlg_setup_share_format").style.display = "none";
+	document.getElementById("dlg_setup_share").style.display = "none";
+	document.getElementById("dlg_setup_share_options").style.display = "none";
 	document.getElementById("dlg_textarea").style.display = "none";
 	document.getElementById("dlg_player_edit").style.display = "none";
 	document.getElementById("dlg_player_name_edited").style.visibility = "";
@@ -2403,14 +2525,21 @@ Region
 					<option value="battletags">plain text (BattleTags only)</option>
 				</select>
 			</div>
-			<div id="dlg_setup_share_format" class="dlg_options">
-				<label for="dlg_setup_value">Format: </label>
-				<select id="dlg_setup_value" onchange="save_settings_value(this);change_setup_format();">
+			<div id="dlg_setup_share" class="dlg_options">
+				<label for="dlg_setup_format">Format: </label>
+				<select id="dlg_setup_format" onchange="save_settings_value(this);change_setup_format();">
 					<option value="text-list">plain text list</option>
 					<option value="text-table">text table</option>
 					<option value="markdown-code-block" selected>Markdown code block (for Discord)</option>
 					<option value="html-table">HTML table</option>
 				</select>
+			</div>
+			<div id="dlg_setup_share_options" class="dlg_options" onchange="save_settings_value(this);change_setup_format();">
+				<input type="checkbox" id="dlg_setup_share_sr">
+				<label for="dlg_setup_share_sr">Include SR</label>
+				<br/>
+				<input type="checkbox" id="dlg_setup_share_classes">
+				<label for="dlg_setup_share_classes">Include classes/roles</label>
 			</div>
 			<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
 			<div id="dlg_player_edit" class="dlg_options table">
@@ -2517,7 +2646,9 @@ var settings_list = [
 	"update_class",
 	"update_sr",
 	"update_edited_fields",
-	"dlg_setup_value"
+	"dlg_setup_format",
+	"dlg_setup_share_sr",
+	"dlg_setup_share_classes"
 	];
 
 for ( i in settings_list ) {
