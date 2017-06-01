@@ -156,6 +156,14 @@ input[type="text"] {
 	width: 100%;
 }
 
+.medium-btn {
+	font-size: 13pt;
+	vertical-align: middle;
+	width: 48%;
+	white-space: normal;
+	padding: 0.2em;
+}
+
 .team-toolbar {
 	display: inline-block;
 	width: 100%;
@@ -1562,12 +1570,12 @@ function export_lobby() {
 	document.getElementById("dlg_format_value").value = "json";
 	document.getElementById("dlg_format_value").onchange = function(event){change_export_format();};
 	document.getElementById("dlg_textarea").style.display = "inline";
-	document.getElementById("dlg_textarea").select();
-	document.getElementById("dlg_textarea").focus();
-	
 	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
 	
 	change_export_format();
+	
+	document.getElementById("dlg_textarea").select();
+	document.getElementById("dlg_textarea").focus();
 }
 
 function import_lobby_dlg() {
@@ -1773,6 +1781,94 @@ function load_setup_url( setup_str ) {
 	redraw_teams( false );
 }
 
+function setup_share_dlg() {
+	init_popup_dlg();
+	document.getElementById("popup_dlg").style.display = "block";
+	document.getElementById("dlg_title").innerHTML = "Share current team setup";
+	document.getElementById("dlg_setup_share_format").style.display = "block";
+	//document.getElementById("dlg_setup_value").value = "text-list";
+	//document.getElementById("dlg_setup_value").onchange = function(event){change_setup_format();};
+	document.getElementById("dlg_textarea").style.display = "inline";
+	document.getElementById("dlg_ok").onclick = function(event){close_dialog();};
+	
+	change_setup_format();
+	
+	document.getElementById("dlg_textarea").select();
+	document.getElementById("dlg_textarea").focus();
+}
+
+function change_setup_format() {
+	var setup_str = "";
+	var format = document.getElementById("dlg_setup_value").value;
+	if ( format == "text-list" ) {
+		setup_str += document.getElementById("team1_name").value + "\n";
+		for (i=0; i<team1.length; i++) {
+			setup_str += team1[i].display_name + "\n";
+		}
+		setup_str += document.getElementById("team2_name").value + "\n";
+		for (i=0; i<team2.length; i++) {
+			setup_str += team2[i].display_name + "\n";
+		}
+	} else if ( (format == "text-table") || (format == "markdown-code-block") ) {
+		// detect max width of columns
+		var column1_width = document.getElementById("team1_name").value.length;
+		for (i=0; i<team1.length; i++) {
+			if (team1[i].display_name.length > column1_width) {
+				column1_width = team1[i].display_name.length;
+			}
+		}
+		column1_width = Math.max( 3, column1_width );
+		var column2_width = document.getElementById("team2_name").value.length;
+		for (i=0; i<team2.length; i++) {
+			if (team2[i].display_name.length > column2_width) {
+				column2_width = team2[i].display_name.length;
+			}
+		}
+		column2_width = Math.max( 3, column2_width );
+		
+		if (format == "markdown-code-block") {
+			setup_str += "```\n";
+		}
+		setup_str += "|"+ str_padding( document.getElementById("team1_name").value, column1_width ) + "|";
+		setup_str += str_padding( document.getElementById("team2_name").value, column2_width ) + "|\n";
+		setup_str += "|"+ str_padding( "", column1_width,"-" ) + "|";
+		setup_str += str_padding( "", column2_width,"-" ) + "|\n";
+		for (i=0; i<team_size; i++) {
+			setup_str += "|";
+			var col_value = "";
+			if ( i < team1.length ) {
+				col_value = team1[i].display_name;
+			}
+			setup_str += str_padding( col_value, column1_width )+"|";
+			col_value = "";
+			if ( i < team2.length ) {
+				col_value = team2[i].display_name;
+			}
+			setup_str += str_padding( col_value, column2_width )+"|\n";
+		}
+		if (format == "markdown-code-block") {
+			setup_str += "```\n";
+		}
+	} else if ( format == "html-table" ) {
+		setup_str += "<table>\n";
+		setup_str += "\t<tr><td>"+document.getElementById("team1_name").value+"</td><td>"+document.getElementById("team2_name").value+"</td></tr>\n";
+		for (i=0; i<team_size; i++) {
+			setup_str += "\t<tr><td>";
+			if ( i < team1.length ) {
+				setup_str += team1[i].display_name;
+			}
+			setup_str += "</td><td>";
+			if ( i < team2.length ) {
+				setup_str += team2[i].display_name;
+			}
+			setup_str += "</td></tr>\n";
+		}
+		setup_str += "</table>";
+	}
+	
+	document.getElementById("dlg_textarea").value = setup_str.trim();
+}
+
 /*
 *		Settings functions
 */
@@ -1861,6 +1957,7 @@ function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_import_export_format").style.display = "none";
 	document.getElementById("dlg_format_value").onchange = function(event){;};
+	document.getElementById("dlg_setup_share_format").style.display = "none";
 	document.getElementById("dlg_textarea").style.display = "none";
 	document.getElementById("dlg_player_edit").style.display = "none";
 	document.getElementById("dlg_player_name_edited").style.visibility = "";
@@ -2066,6 +2163,14 @@ function on_hash_change() {
 	}
 }
 
+function str_padding( source_str, length, padding_char=" " ) {
+	var result = source_str;
+	while ( result.length < length ) {
+		result += padding_char;
+	}
+	return result;
+}
+
 </script>
 </head>
 <body >
@@ -2150,10 +2255,12 @@ Region
 				<br/>
 				<br/>
 				<input class="big-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats" title="Update stats for all players"/>
-				
 				<br/>
 				<br/>
-				<input class="big-btn" type="button" onclick="fill_test_teams();" value="Generate random players"/>
+				<div>
+					<input class="medium-btn" type="button" onclick="setup_share_dlg();" value="Share team setup" title="Current team setup in text format"/>
+					<input class="medium-btn" type="button" onclick="fill_test_teams();" value="Add test players" title="Generate random players for tests" style="float: right;"/>
+				</div>
 			</div>
 		</div>
 		
@@ -2251,7 +2358,9 @@ Region
 		
 		<div class="cell">
 			<div class="tips">
-				<span class="team-title">&#x2753; Info</span>
+				<span class="team-title">
+					<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> 
+					Info</span>
 				<br>
 				<ul>
 					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sesitive</li>
@@ -2287,11 +2396,20 @@ Region
 			<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog();" value="X"/>
 			<br/>
 			<br/>
-			<div id="dlg_import_export_format" class="dlg_options ">
-				<label for=""><span id="dlg_operation">Export</span> format: </label>
+			<div id="dlg_import_export_format" class="dlg_options">
+				<label for="dlg_format_value"><span id="dlg_operation">Export</span> format: </label>
 				<select id="dlg_format_value">
 					<option value="json">JSON (full info)</option>
 					<option value="battletags">plain text (BattleTags only)</option>
+				</select>
+			</div>
+			<div id="dlg_setup_share_format" class="dlg_options">
+				<label for="dlg_setup_value">Format: </label>
+				<select id="dlg_setup_value" onchange="save_settings_value(this);change_setup_format();">
+					<option value="text-list">plain text list</option>
+					<option value="text-table">text table</option>
+					<option value="markdown-code-block" selected>Markdown code block (for Discord)</option>
+					<option value="html-table">HTML table</option>
 				</select>
 			</div>
 			<textarea id="dlg_textarea" rows="10" cols="50"></textarea>
@@ -2398,7 +2516,8 @@ var settings_list = [
 	"balance_enable_captains",
 	"update_class",
 	"update_sr",
-	"update_edited_fields"
+	"update_edited_fields",
+	"dlg_setup_value"
 	];
 
 for ( i in settings_list ) {
