@@ -31,9 +31,22 @@ input[type="text"] {
 	display: inline;
 }
 
+input[id="new_player_id"] {
+	font-size: 12pt;
+}
+
+button[id="add_btn"] {
+	font-size: 12pt;
+}
+
 .team-title {
 	font-size: 20pt;
-	border: none !important;
+	border: 1px solid white !important;
+	width: 100%;
+}
+
+input.team-title:hover {
+	border: 1px solid gray !important;
 }
 
 .table {
@@ -167,6 +180,11 @@ input[type="text"] {
 .team-toolbar {
 	display: inline-block;
 	width: 100%;
+	visibility: hidden;
+}
+
+div.team-cell:hover > div.team-toolbar {
+	visibility: visible;
 }
 
 .sr-edit {
@@ -178,9 +196,14 @@ input[type="text"] {
 	background-color: lightgreen;
 	border-radius: 1em;
 	padding: 1em;
+	padding-top: 0.2em;
 	margin-left: 5em;
 	max-width: 25em;
 	min-width: 20em;
+}
+
+.tips-title {
+	font-size: 20pt;
 }
 
 ul {
@@ -823,7 +846,8 @@ function calculate_team_sr( team, use_balance_options=false ) {
 			}
 			team_sr += player_sr;
 		}
-		team_sr = Math.round(team_sr / team.length);
+		//team_sr = Math.round(team_sr / team.length);
+		team_sr = Math.round(team_sr / team_size);
 	}
 	return team_sr;
 }
@@ -2301,25 +2325,15 @@ function str_padding( source_str, length, padding_char=" " ) {
 <div class="copyright">2017 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Data from <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
 <br/>
 
-
-Team size <input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size();"/> players. 
-Region 
-<select id="region" onchange="update_region();">
-	<option value="eu">EU</option>
-	<option value="us">US</option>
-	<option value="kr">KR</option>
-</select> 
 <br/>
-<br/>
-
 
 <input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="BattleTag" value="" onkeyup="new_player_keyup(event);"/> 
-<button onclick="add_player_click();" id="add_btn" >add player</button>
+<button onclick="add_player_click();" id="add_btn" >Add player</button>
 <br/>
 
 <div class="table teams">
 	<div class="row">
-		<div class="cell">
+		<div class="cell team-cell">
 			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
 			<input title="Import lobby" id="import_lobby_btn" type="button" class="team_btn" onclick="import_lobby_dlg();" value="Import"/>
@@ -2353,7 +2367,7 @@ Region
 		<!-- spacer -->
 		</div>
 	
-		<div class="cell">
+		<div class="cell team-cell">
 			<div class="team-toolbar">
 			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team1);redraw_teams();" value=" X "/>
 			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
@@ -2394,7 +2408,7 @@ Region
 		<input type="button" title="Swap selected players" id="swap_btn" disabled="true" onclick="swap_players();" value="&larr;&rarr;"/>
 		</div>
 		
-		<div class="cell">
+		<div class="cell team-cell">
 			<div class="team-toolbar">
 			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team2);redraw_teams();" value=" X "/>
 			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
@@ -2413,6 +2427,40 @@ Region
 			</div>
 			
 			<br/>
+			
+			<div class="group">
+				<div class="group-header" onclick="collapse_group(this);">
+					<div class="header-icon"><span>+</span></div>
+					Main settings
+				</div>
+				<div class="group-content group-collapsed">
+					<div class="table">
+						<div class="row">
+							<div class="cell">
+								Team size
+							</div>
+							<div class="cell">
+								<input id="team_size" name="team_size" type="number" size=3 min=1 max=12 style="width: 3em;" value="" onchange="update_team_size();"/> players
+							</div>
+						</div>
+						<div class="row">
+							<div class="cell">
+								Region
+							</div>
+							<div class="cell">
+								<select id="region" onchange="update_region();">
+									<option value="eu">EU</option>
+									<option value="us">US</option>
+									<option value="kr">KR</option>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			</br>
+			
 			<div class="group">
 				<div class="group-header" onclick="collapse_group(this);">
 					<div class="header-icon"><span>+</span></div>
@@ -2480,7 +2528,7 @@ Region
 		
 		<div class="cell">
 			<div class="tips">
-				<span class="team-title">
+				<span class="tips-title">
 					<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> 
 					Info</span>
 				<br>
