@@ -364,6 +364,7 @@ var current_player_edit = "";
 var team1_captain = "";
 var team2_captain = "";
 var url_hash_edited = true; // just to prevent loops
+var lobby_filter_timer = 0;
 
 // variables for recursive team balancer
 var balance_team_combinations = [];
@@ -725,6 +726,10 @@ function redraw_teams( update_hash = true ) {
 		location.hash = generate_setup_url();
 		url_hash_edited = false; // do not loop redraws with event listener
 	}
+
+	if (document.getElementById("lobby_filter").value != "") {
+		apply_lobby_filter();
+	}
 }
 
 function collapse_group( header ) {
@@ -745,6 +750,11 @@ function collapse_group( header ) {
 }
 
 function lobby_filter_change() {
+	clearTimeout( lobby_filter_timer );
+	lobby_filter_timer = setTimeout( apply_lobby_filter, 400 );
+}
+
+function apply_lobby_filter() {
 	var filter_value = document.getElementById("lobby_filter").value.toLowerCase();
 	if (filter_value != "") {
 		document.getElementById("lobby_filter").classList.add("filter-active");
@@ -759,6 +769,11 @@ function lobby_filter_change() {
 			document.getElementById(lobby[i].id).parentElement.style.display = "none";
 		}
 	}
+}
+
+function lobby_filter_clear() {
+	document.getElementById("lobby_filter").value="";
+	apply_lobby_filter();
 }
 
 function new_player_keyup(ev) {
@@ -2350,6 +2365,7 @@ function str_padding( source_str, length, padding_char=" " ) {
 			<span id="lobby_count">0</span> players<br/>
 			
 			<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="filter by name or battletag" value="" oninput="lobby_filter_change();"/> 
+			<span onclick="lobby_filter_clear();" style="cursor: default;" title="Clear filter" alt="Clear filter"> &#9003; </span>
 			
 			<div class="lobby-container">
 				<div class="table team" id="lobby">
