@@ -180,11 +180,12 @@ input.team-title:hover {
 .team-toolbar {
 	display: inline-block;
 	width: 100%;
-	visibility: hidden;
+	opacity: 0.2;
+	transition: opacity 0.2s;
 }
 
 div.team-cell:hover > div.team-toolbar {
-	visibility: visible;
+	opacity: 1.0;
 }
 
 .sr-edit {
