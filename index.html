@@ -278,6 +278,7 @@ textarea {
 .filter {
 	border: 1px solid;
 	margin-bottom: 5px;
+	flex: 1;
 }
 
 .filter-active {
@@ -2364,8 +2365,11 @@ function str_padding( source_str, length, padding_char=" " ) {
 			
 			<span id="lobby_count">0</span> players<br/>
 			
-			<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="filter by name or battletag" value="" oninput="lobby_filter_change();"/> 
-			<span onclick="lobby_filter_clear();" style="cursor: default;" title="Clear filter" alt="Clear filter"> &#9003; </span>
+			<div style="display: flex;">
+				<label for="lobby_filter">Filter: &nbsp;</label>
+				<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="player name or battletag" value="" oninput="lobby_filter_change();"/> 
+				<span onclick="lobby_filter_clear();" style="cursor: default;" title="Clear filter" alt="Clear filter"> &#9003; </span>
+			</div>
 			
 			<div class="lobby-container">
 				<div class="table team" id="lobby">
