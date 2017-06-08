@@ -148,7 +148,6 @@ input.team-title:hover {
 	bottom: 0;
 	overflow-y: auto;
 	max-height: 33em;
-	padding-right: 1.2em;
 	overflow-x: hidden;
 }
 
@@ -2782,6 +2781,7 @@ window.addEventListener("hashchange", on_hash_change, false);
 // adjust lobby margin to account scrollbar width
 var lobby_container = document.getElementsByClassName("lobby-container").item(0);
 lobby_container.style.marginRight = "-"+getScrollbarWidth()+"px";
+lobby_container.style.paddingRight = ""+getScrollbarWidth()+"px";
 
 </script>
 
