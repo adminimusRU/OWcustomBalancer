@@ -200,6 +200,11 @@ div.team-cell:hover > div.team-toolbar {
 	margin-left: 5em;
 	max-width: 25em;
 	min-width: 20em;
+	color: #333333;
+}
+
+.tips b {
+	color: black;
 }
 
 .tips-title {
@@ -2379,7 +2384,7 @@ function getScrollbarWidth() {
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_team(lobby);redraw_teams();" value=" X "/>
 			<input title="Import lobby" id="import_lobby_btn" type="button" class="team_btn" onclick="import_lobby_dlg();" value="Import"/>
 			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby();" value="Export"/>
-			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_team(lobby, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
 			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_team(lobby, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
 			</div>
 		
@@ -2414,10 +2419,9 @@ function getScrollbarWidth() {
 	
 		<div class="cell team-cell">
 			<div class="team-toolbar">
-			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team1);redraw_teams();" value=" X "/>
-			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1);redraw_teams();" value=" X "/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
 			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team1, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
-			<input title="Move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1);redraw_teams();" value="&lt;&lt;"/>
 			</div>
 			
 			<div>
@@ -2455,10 +2459,9 @@ function getScrollbarWidth() {
 		
 		<div class="cell team-cell">
 			<div class="team-toolbar">
-			<input title="Clear team" type="button" class="team_btn" onclick="clear_team(team2);redraw_teams();" value=" X "/>
-			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;#"/>
+			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2);redraw_teams();" value=" X "/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
 			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team2, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
-			<input title="Move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2);redraw_teams();" value="&lt;&lt;"/>
 			</div>
 			
 			<div>
@@ -2579,8 +2582,8 @@ function getScrollbarWidth() {
 				<br>
 				<ul>
 					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sesitive</li>
-					<li>Move players with drag & drop or double click</li>
-					<li>Right click on player to edit name, SR and class</li>
+					<li>Move players with <b>drag & drop</b> or <b>double click</b></li>
+					<li><b>Right click</b> on player to edit name, SR and class</li>
 					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>You can export and import player list from lobby</li>
@@ -2694,6 +2697,7 @@ function getScrollbarWidth() {
 			</div>
 			<br/>
 			<input id="dlg_update_player_stats" class="big-btn" type="button" value="&#8635; Update stats" onclick="update_current_player_stats();"/>
+			
 			<br/>
 			<input id="dlg_ok" class="big-btn" type="button" value="OK"/>
 		</div>
