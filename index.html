@@ -175,6 +175,7 @@ input.team-title:hover {
 	width: 48%;
 	white-space: normal;
 	padding: 0.2em;
+	min-height: 2em;
 }
 
 .team-toolbar {
@@ -346,7 +347,7 @@ input[readonly] {
 
 .dlg-edited-mark {
 	visibility: hidden;
-	cursor: default;
+	cursor: pointer;
 	color: blue;
 	font-weight: bold;
 }
@@ -819,7 +820,8 @@ function reset_highlighted_players() {
 // disabled or enables all buttons related to fetching stats
 function toggle_owapi_buttons( button_enabled=true ) {
 	document.getElementById("add_btn").disabled = ( ! button_enabled );
-	document.getElementById("update_stats_btn").disabled = ( ! button_enabled );
+	document.getElementById("update_all_stats_btn").disabled = ( ! button_enabled );
+	document.getElementById("update_active_stats_btn").disabled = ( ! button_enabled );
 	document.getElementById("dlg_update_player_stats").disabled = ( ! button_enabled );
 	document.getElementById("import_lobby_btn").disabled = ( ! button_enabled );
 }
@@ -882,7 +884,7 @@ function calculate_team_sr( team, use_balance_options=false ) {
 function update_next_player_stats( ) {
 	if ( players_for_update.length > 0 ) {
 		var current_player = players_for_update[0];
-		document.getElementById("update_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
+		document.getElementById("update_active_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
 		
 		OWAPI.id = current_player.id;
 		OWAPI.onSuccess = update_player_success;
@@ -892,7 +894,7 @@ function update_next_player_stats( ) {
 		// all players updated
 		alert("All stats updated");
 		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
-		document.getElementById("update_stats_btn").value = "↻ Update stats";
+		document.getElementById("update_active_stats_btn").value = "↻ Update active players";
 		redraw_teams();
 		fill_player_stats_dlg();
 	}
@@ -902,6 +904,12 @@ function update_player_success() {
 	var player = players_for_update.shift();
 	
 	player.level = OWAPI.level;
+	
+	// check if name was manually edited
+	if ( (player.ne !== true) || document.getElementById("update_edited_fields").checked ) {
+		player.display_name = OWAPI.display_name;
+	}
+
 	
 	if( document.getElementById("update_sr").checked ) {
 		// check if SR was manually edited and update option checked
@@ -930,7 +938,7 @@ function update_player_fail( msg ) {
 		setTimeout( update_next_player_stats, min_api_request_interval );
 	} else {
 		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
-		document.getElementById("update_stats_btn").value = "↻ Update stats";
+		document.getElementById("update_active_stats_btn").value = "↻ Update stats";
 		redraw_teams();
 	}
 }
@@ -946,7 +954,23 @@ function update_all_stats() {
 	};
 
 	toggle_owapi_buttons( false );
-	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	
+	update_next_player_stats();
+}
+
+function update_active_stats() {
+	players_for_update.splice( 0, players_for_update.length );
+	players_for_update = team1.concat(team2);
+	total_playets_for_update = players_for_update.length;
+	
+	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
+	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
+		return;
+	};
+
+	toggle_owapi_buttons( false );
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
 }
@@ -1334,11 +1358,34 @@ function update_current_player_stats() {
 	total_playets_for_update = players_for_update.length;
 	
 	toggle_owapi_buttons( false );
-	document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 	
 	update_next_player_stats();
 }
 
+function clear_edited_mark( field_name ) {
+	if (current_player_edit == "") {
+		return;
+	}
+	
+	var player_struct = find_player_by_id(current_player_edit);
+	
+	switch (field_name) {
+		case 'ne': 
+			player_struct.ne = false;
+			document.getElementById("dlg_player_name_edited").style.visibility = "";
+			break;
+		case 'se': 
+			player_struct.se = false;
+			document.getElementById("dlg_player_sr_edited").style.visibility = "";
+			break;
+		case 'ce': 
+			player_struct.ce = false;
+			document.getElementById("dlg_player_class1_edited").style.visibility = "";
+			document.getElementById("dlg_player_class2_edited").style.visibility = "";
+			break;
+	}
+}
 
 /*
 *		Team balancer functions
@@ -1709,7 +1756,7 @@ function import_lobby() {
 			if (added_players.length > 0) {
 				total_playets_for_update = players_for_update.length;
 				toggle_owapi_buttons( false );
-				document.getElementById("update_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+				document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
 				update_next_player_stats();
 			}
 		}
@@ -2453,7 +2500,7 @@ function getScrollbarWidth() {
 				<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams" title="Automatically find most balanced compositions"/>
 				<br/>
 				<br/>
-				<input class="medium-btn" type="button" onclick="setup_share_dlg();" value="Share team setup" title="Current team setup in text format"/>
+				<input class="big-btn" type="button" id="update_active_stats_btn" onclick="update_active_stats();" value="&#8635; Update active players" title="Update stats for active players"/>
 			</div>
 		</div>
 		
@@ -2489,8 +2536,12 @@ function getScrollbarWidth() {
 				<br/>
 				<br/>
 				<div>
-					<input class="medium-btn" type="button" id="update_stats_btn" onclick="update_all_stats();" value="&#8635; Update stats" title="Update stats for all players"/>
-					<input class="medium-btn" type="button" onclick="fill_test_teams();" value="Add test players" title="Generate random players for tests" style="float: right;"/>
+					<input class="medium-btn" type="button" onclick="setup_share_dlg();" value="Share team setup" title="Current team setup in text format"/>
+					<input class="medium-btn" type="button" id="update_all_stats_btn" onclick="update_all_stats();" value="&#8635; Update all" title="Update stats for all players" style="float: right;"/>
+				</div>
+				<br/>
+				<div>
+					<input class="medium-btn" type="button" onclick="fill_test_teams();" value="Add test players" title="Generate random players for tests" style="float: right; display: none;"/>
 				</div>
 			</div>
 			
@@ -2570,7 +2621,7 @@ function getScrollbarWidth() {
 					<div class="cell"><label for="dlg_player_display_name">Name:</label></div>
 					<div class="cell">
 						<input id="dlg_player_display_name" type="text">
-						<span id="dlg_player_name_edited" class="dlg-edited-mark" title="Name was manually edited">&#9997;</span>
+						<span id="dlg_player_name_edited" class="dlg-edited-mark" title="Name was manually edited" onclick="clear_edited_mark('ne');">&#9997;</span>
 					</div>
 				</div>
 				<div class="row">
@@ -2581,7 +2632,7 @@ function getScrollbarWidth() {
 					<div class="cell"><label for="dlg_player_sr">SR:</label></div>
 					<div class="cell">
 						<input id="dlg_player_sr" type="number" min=0 max=5000>
-						<span id="dlg_player_sr_edited" class="dlg-edited-mark" title="SR was manually edited">&#9997;</span>
+						<span id="dlg_player_sr_edited" class="dlg-edited-mark" title="SR was manually edited" onclick="clear_edited_mark('se');">&#9997;</span>
 					</div>
 				</div>
 			</div>
@@ -2595,7 +2646,7 @@ function getScrollbarWidth() {
 							<option value="support">support</option>
 							<option value="defence">defence</option>
 						</select>
-						<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited">&#9997;</span>
+						<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
 					</div>
 				</div>
 				<div class="row">
@@ -2608,7 +2659,7 @@ function getScrollbarWidth() {
 							<option value="support">support</option>
 							<option value="defence">defence</option>
 						</select>
-						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited">&#9997;</span>
+						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
 					</div>
 				</div>	
 			</div>
