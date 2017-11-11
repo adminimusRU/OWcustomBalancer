@@ -1,3 +1,4 @@
-* make single queue for all OWAPI requests to avoid too frequent calls;
+* make single queue for all OWAPI requests to avoid too frequent calls
 * update active players silently
 * make another api request on timeout
+* record last update timestamp per player, dont auto update stats twice
