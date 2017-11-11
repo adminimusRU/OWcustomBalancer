@@ -362,6 +362,12 @@ input[readonly] {
 	margin-right: 0.5em;
 }
 
+div[id="stats_update_log"] {
+	font-size: 12pt;
+	font-style: italic;
+	color: gray;
+}
+
 </style>
 
 <script language="JavaScript" type="text/javascript">
@@ -427,10 +433,14 @@ var class_names = [
 
 // player stats fetcher
 var players_for_update = [];
-var total_playets_for_update = 0;
-var min_api_request_interval = 5000; //milliseconds
+var total_players_for_update = 0;
+var min_api_request_interval = 6000; //milliseconds
 var top_class_min_fraction = 0.25; // fraction of overall time played
 var top_hero_max_ratio = 4.0; // ratio of hero playtime to detect top heroes
+var stat_update_fails = 0;
+var silent_update = false; // show message when update completed successfully
+var silent_update_errors = false; // show message when update failed
+var owapi_timeout = 15000; // 15 sec timeout for OWAPI requests
 
 // OWAPI interface object
 // usage: 
@@ -464,13 +474,13 @@ var OWAPI = {
 		this.display_name = format_player_name( this.id );
 	
 		var xhttp = new XMLHttpRequest();
-		xhttp.onreadystatechange = function() {
+		xhttp.onload = function() {
 			if (this.readyState == 4 ) {
 				if ( this.status == 200) {
 					try {
 						var stats_obj = JSON.parse(this.responseText);
 						if ( stats_obj[region] === null ) {	
-							throw "Player has no stats in region "+region.toUpperCase();
+							throw new Error("Player has no stats in region "+region.toUpperCase());
 						}
 						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
 						OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
@@ -484,7 +494,7 @@ var OWAPI = {
 					}
 					catch (err) {
 						if(typeof OWAPI.onFail == "function") {
-							OWAPI.onFail.call( err.message );
+							OWAPI.onFail.call( OWAPI, err.message );
 						}
 					}
 						
@@ -501,7 +511,22 @@ var OWAPI = {
 				}
 			}
 		};
+		xhttp.ontimeout = function() {
+			var msg = "OWAPI timeout";
+			if(typeof OWAPI.onFail == "function") {
+				OWAPI.onFail.call( OWAPI, msg );
+			}
+		};
+		
+		xhttp.onerror = function() {
+			var msg = "OWAPI error - "+this.statusText;
+			if(typeof OWAPI.onFail == "function") {
+				OWAPI.onFail.call( OWAPI, msg );
+			}
+		};
+		
 		xhttp.open("GET", "https://owapi.net/api/v3/u/"+this.id+"/blob", true);
+		xhttp.timeout = owapi_timeout;
 		xhttp.send();
 	},
 	
@@ -884,7 +909,7 @@ function calculate_team_sr( team, use_balance_options=false ) {
 function update_next_player_stats( ) {
 	if ( players_for_update.length > 0 ) {
 		var current_player = players_for_update[0];
-		document.getElementById("update_active_stats_btn").value = "↻ Updating stats..."+(total_playets_for_update-players_for_update.length+1)+" / "+total_playets_for_update;
+		document.getElementById("update_active_stats_btn").value = "↻ Updating stats..."+(total_players_for_update-players_for_update.length+1)+" / "+total_players_for_update;
 		
 		OWAPI.id = current_player.id;
 		OWAPI.onSuccess = update_player_success;
@@ -892,7 +917,14 @@ function update_next_player_stats( ) {
 		OWAPI.getStats();
 	} else {
 		// all players updated
-		alert("All stats updated");
+		if ( ! silent_update ) {
+			var msg = "Updated "+(total_players_for_update-stat_update_fails)+" players";
+			if ( stat_update_fails > 0 ) {
+				msg += ", "+stat_update_fails+" players failed";
+			}
+			stat_update_fails = 0;
+			alert(msg);
+		}
 		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 		document.getElementById("update_active_stats_btn").value = "↻ Update active players";
 		redraw_teams();
@@ -912,10 +944,12 @@ function update_player_success() {
 
 	
 	if( document.getElementById("update_sr").checked ) {
-		// check if SR was manually edited and update option checked
-		if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
-			player.sr = OWAPI.sr;
-			player.se = false;
+		if ( OWAPI.sr != 0 ) {
+			// check if SR was manually edited and update option checked
+			if ( (player.se !== true) || document.getElementById("update_edited_fields").checked ) {
+				player.sr = OWAPI.sr;
+				player.se = false;
+			}
 		}
 	}
 	
@@ -933,20 +967,27 @@ function update_player_success() {
 }
 
 function update_player_fail( msg ) {
+	stat_update_fails++;
 	players_for_update.shift();
-	if( confirm( "Error on updating player "+OWAPI.id+": "+msg+". Continue updating stats?" ) ) {
+	
+	if( silent_update_errors ) {
+		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
 		setTimeout( update_next_player_stats, min_api_request_interval );
 	} else {
-		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
-		document.getElementById("update_active_stats_btn").value = "↻ Update stats";
-		redraw_teams();
+		if( confirm( "Error on updating player "+OWAPI.id+": "+msg+". Continue updating stats?" ) ) {
+			setTimeout( update_next_player_stats, min_api_request_interval );
+		} else {
+			setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
+			document.getElementById("update_active_stats_btn").value = "↻ Update stats";
+			redraw_teams();
+		}
 	}
 }
 
 function update_all_stats() {
 	players_for_update.splice( 0, players_for_update.length );
 	players_for_update = lobby.concat(team1).concat(team2);
-	total_playets_for_update = players_for_update.length;
+	total_players_for_update = players_for_update.length;
 	
 	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
 	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
@@ -954,7 +995,13 @@ function update_all_stats() {
 	};
 
 	toggle_owapi_buttons( false );
-	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
+	
+	silent_update = false;
+	silent_update_errors = true;
+	
+	stat_update_fails = 0;
+	document.getElementById("stats_update_log").innerHTML = "";
 	
 	update_next_player_stats();
 }
@@ -962,7 +1009,7 @@ function update_all_stats() {
 function update_active_stats() {
 	players_for_update.splice( 0, players_for_update.length );
 	players_for_update = team1.concat(team2);
-	total_playets_for_update = players_for_update.length;
+	total_players_for_update = players_for_update.length;
 	
 	var time_needed = Math.round( (min_api_request_interval+2000)*players_for_update.length / 1000 );
 	if ( !confirm("Updating all players stats will take about "+time_needed+" seconds due to request interval restrictions.") ) {
@@ -970,7 +1017,10 @@ function update_active_stats() {
 	};
 
 	toggle_owapi_buttons( false );
-	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
+	
+	silent_update = false;
+	silent_update_errors = false;
 	
 	update_next_player_stats();
 }
@@ -1132,6 +1182,10 @@ function player_drop(ev) {
 		target_team[target_index] = dragged_player;
 	}
 	
+	if ((target_team != lobby) && (dragged_team == lobby)) {
+		update_picked_player( dragged_id );
+	}
+	
 	update_captains();
 	
 	redraw_teams();
@@ -1184,6 +1238,10 @@ function player_dblClick(ev) {
 	// clear selection
 	selected_player_team1 = "";
 	selected_player_team2 = "";
+	
+	if (selected_team == lobby) {
+		update_picked_player( selected_id );
+	}
 	
 	update_captains();
 	
@@ -1355,12 +1413,45 @@ function update_current_player_stats() {
 	
 	players_for_update.splice( 0, players_for_update.length );
 	players_for_update.push( player_struct );
-	total_playets_for_update = players_for_update.length;
+	total_players_for_update = players_for_update.length;
 	
 	toggle_owapi_buttons( false );
-	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
+	
+	silent_update = false;
+	silent_update_errors = false;
 	
 	update_next_player_stats();
+}
+
+// update stats in background when player moved from lobby to teams
+function update_picked_player( selected_id ) {
+	if( ! document.getElementById("update_picked").checked ) {
+		return;
+	}
+	
+	var player_struct = find_player_by_id(selected_id);
+	
+	//document.getElementById("stats_update_log").innerHTML += "length="+players_for_update.length;
+	
+	if ( players_for_update.length > 0 ) {
+		// update in progress - add to queue
+		players_for_update.push( player_struct );
+		total_players_for_update++;
+	} else {
+		// initiate update
+		players_for_update.splice( 0, players_for_update.length );
+		players_for_update.push( player_struct );
+		total_players_for_update = players_for_update.length;
+		
+		toggle_owapi_buttons( false );
+		document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
+		
+		silent_update = true;
+		silent_update_errors = false;
+		
+		update_next_player_stats();
+	}
 }
 
 function clear_edited_mark( field_name ) {
@@ -1754,9 +1845,13 @@ function import_lobby() {
 			
 			// get stats for added players
 			if (added_players.length > 0) {
-				total_playets_for_update = players_for_update.length;
+				total_players_for_update = players_for_update.length;
 				toggle_owapi_buttons( false );
-				document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_playets_for_update;
+				document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
+				silent_update = false;
+				silent_update_errors = true;
+				stat_update_fails = 0;
+				document.getElementById("stats_update_log").innerHTML = "";
 				update_next_player_stats();
 			}
 		}
@@ -2550,28 +2645,35 @@ function getScrollbarWidth() {
 		<div class="cell">
 			<div class="tips">
 				<span class="tips-title">
-					<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> 
-					Info</span>
+					<!--<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> -->
+					<img src="rank_icons/bronze_small.png" style="display:inline-block;vertical-align: middle;" height="32">
+					How to use</span>
 				<br>
 				<ul>
 					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sesitive</li>
 					<li>Move players with <strong>drag & drop</strong> or <strong>double click</strong></li>
+					<li>Click 'Balance teams' to automatically swap players between teams for best balance</li>
+				</ul>
+				<span class="tips-title">
+					<!--<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> -->
+					<img src="rank_icons/top500_small.png" style="display:inline-block;vertical-align: middle;" height="32">
+					Pro tips</span>
+				<br>
+				<ul>
 					<li><strong>Right click</strong> on player to edit name, SR and class</li>
 					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
-					<li>You can export and import player list from lobby</li>
-					<li>Click 'Balance teams' to automatically swap players between teams for best balance</li>
+					<li>Player list can be imported and exported with buttons above lobby</li>
 					<li>Balance algorithm tuning slider:
 						<ul>
 							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
-							<li>In rightmost position balancer will only account player classes (SR difference can be huge)</li>
-							<li>In intermediate position balancer will account both SR and classes in a given proportion</li>
+							<li>In intermediate position balancer will account both SR and hero classes in a given proportion</li>
 						</ul> 
 					</li>
 					<li>Click 'Balance teams' again to look through best balance variants</li>
 					<li>Team captains (if enabled) will not be moved by autobalancer</li>
 					<li>Page URL contains current team setup and can be shared</li>
-				</ul> 
+				</ul>
 			</div>
 		</div>
 	</div>
@@ -2763,6 +2865,9 @@ function getScrollbarWidth() {
 						<input type="checkbox" id="update_edited_fields" onchange="save_settings_value(this);">
 						<label for="update_edited_fields">Update manually edited fields (name, SR, class)</label>
 						</br>
+						<input type="checkbox" id="update_picked" onchange="save_settings_value(this);" checked>
+						<label for="update_picked">Update player stats when moved form lobby</label>
+						</br>
 					</div>
 				</div>
 			</div>
@@ -2783,6 +2888,8 @@ Balance debug settings <br/>
 </div>
 
 <div id="balance_dbg_test_result" style="display: none;"></div>
+
+<div id="stats_update_log"></div>
 
 <script>
 //restore saved players to teams
@@ -2812,6 +2919,7 @@ var settings_list = [
 	"update_class",
 	"update_sr",
 	"update_edited_fields",
+	"update_picked",
 	"dlg_setup_format",
 	"dlg_setup_share_sr",
 	"dlg_setup_share_classes"
@@ -2830,8 +2938,6 @@ for ( i in settings_list ) {
 		} else if ( setting_input.type == "range" ) {
 			setting_input.value = Number(setting_value);
 		}
-		
-		
 	}
 }
 
