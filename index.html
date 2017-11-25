@@ -441,6 +441,9 @@ var stat_update_fails = 0;
 var silent_update = false; // show message when update completed successfully
 var silent_update_errors = false; // show message when update failed
 var owapi_timeout = 15000; // 15 sec timeout for OWAPI requests
+var stats_updater_ready = true; // set to false when update is done, but still need to wait for request interval before next update
+var stats_update_max_retry = 2;
+var stats_update_current_retry = 2;
 
 // OWAPI interface object
 // usage: 
@@ -459,6 +462,8 @@ var OWAPI = {
 	
 	onSuccess: undefined, // Set to actual callback function before use
 	onFail: undefined, // Set to actual callback function before use
+	
+	can_retry: false, // will be set to true on "soft" errors (like timeouts)
 	
 	getStats: function() {
 		// reset
@@ -480,6 +485,7 @@ var OWAPI = {
 					try {
 						var stats_obj = JSON.parse(this.responseText);
 						if ( stats_obj[region] === null ) {	
+							OWAPI.can_retry = false;
 							throw new Error("Player has no stats in region "+region.toUpperCase());
 						}
 						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
@@ -501,9 +507,14 @@ var OWAPI = {
 				} else {
 					var msg = "";
 					switch (this.status) {
-						case 404: msg = "Player not found (incorrect BattleTag)"; break;
-						case 429: msg = "Too many stats requests, try later"; break;
+						case 404: msg = "Player not found (incorrect BattleTag)";
+									OWAPI.can_retry = false;
+									break;
+						case 429: msg = "Too many stats requests, try later";
+									OWAPI.can_retry = true;
+									break;
 						default: msg = "Can't get player stats (HTTP "+this.status+": "+this.statusText+")";
+									OWAPI.can_retry = true;
 					}
 					if(typeof OWAPI.onFail == "function") {
 						OWAPI.onFail.call( OWAPI, msg );
@@ -513,6 +524,7 @@ var OWAPI = {
 		};
 		xhttp.ontimeout = function() {
 			var msg = "OWAPI timeout";
+			OWAPI.can_retry = true;
 			if(typeof OWAPI.onFail == "function") {
 				OWAPI.onFail.call( OWAPI, msg );
 			}
@@ -907,6 +919,11 @@ function calculate_team_sr( team, use_balance_options=false ) {
 }
 
 function update_next_player_stats( ) {
+	if ( ! stats_updater_ready ) {
+		// need to wait before next request
+		setTimeout( function(){update_next_player_stats();}, min_api_request_interval);
+		return;
+	}
 	if ( players_for_update.length > 0 ) {
 		var current_player = players_for_update[0];
 		document.getElementById("update_active_stats_btn").value = "↻ Updating stats..."+(total_players_for_update-players_for_update.length+1)+" / "+total_players_for_update;
@@ -929,6 +946,9 @@ function update_next_player_stats( ) {
 		document.getElementById("update_active_stats_btn").value = "↻ Update active players";
 		redraw_teams();
 		fill_player_stats_dlg();
+		stats_updater_ready = false;
+		// ensure next request will not be sent too early
+		setTimeout( function(){stats_updater_ready = true;}, min_api_request_interval);
 	}
 }
 
@@ -963,12 +983,21 @@ function update_player_success() {
 	
 	player.top_heroes = OWAPI.top_heroes;
 	
+	stats_update_current_retry = 0;
 	setTimeout( update_next_player_stats, min_api_request_interval );
 }
 
 function update_player_fail( msg ) {
+	if ( OWAPI.can_retry = true && (stats_update_current_retry <= stats_update_max_retry) ) {
+		// log error and retry
+		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
+		stats_update_current_retry++;
+		setTimeout( update_next_player_stats, min_api_request_interval );
+		return;
+	}
 	stat_update_fails++;
 	players_for_update.shift();
+	stats_update_current_retry = 0;
 	
 	if( silent_update_errors ) {
 		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
@@ -1020,7 +1049,7 @@ function update_active_stats() {
 	document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
 	
 	silent_update = false;
-	silent_update_errors = false;
+	silent_update_errors = true;
 	
 	update_next_player_stats();
 }
@@ -1431,8 +1460,6 @@ function update_picked_player( selected_id ) {
 	}
 	
 	var player_struct = find_player_by_id(selected_id);
-	
-	//document.getElementById("stats_update_log").innerHTML += "length="+players_for_update.length;
 	
 	if ( players_for_update.length > 0 ) {
 		// update in progress - add to queue
@@ -2645,8 +2672,8 @@ function getScrollbarWidth() {
 		<div class="cell">
 			<div class="tips">
 				<span class="tips-title">
-					<!--<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> -->
-					<img src="rank_icons/bronze_small.png" style="display:inline-block;vertical-align: middle;" height="32">
+					<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span>
+					<!--<img src="rank_icons/bronze_small.png" style="display:inline-block;vertical-align: middle;" height="32">-->
 					How to use</span>
 				<br>
 				<ul>
