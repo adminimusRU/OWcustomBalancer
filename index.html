@@ -444,6 +444,7 @@ var owapi_timeout = 15000; // 15 sec timeout for OWAPI requests
 var stats_updater_ready = true; // set to false when update is done, but still need to wait for request interval before next update
 var stats_update_max_retry = 2;
 var stats_update_current_retry = 2;
+var stats_update_dbg = false;
 
 // OWAPI interface object
 // usage: 
@@ -919,41 +920,29 @@ function calculate_team_sr( team, use_balance_options=false ) {
 }
 
 function update_next_player_stats( ) {
+	dbg_msg("upd nxt. rdy="+stats_updater_ready);
 	if ( ! stats_updater_ready ) {
 		// need to wait before next request
-		setTimeout( function(){update_next_player_stats();}, min_api_request_interval);
+		setTimeout( function(){update_next_player_stats();}, min_api_request_interval+100);
 		return;
 	}
 	if ( players_for_update.length > 0 ) {
 		var current_player = players_for_update[0];
+		dbg_msg("upd nxt. get stat="+current_player.id);
 		document.getElementById("update_active_stats_btn").value = "↻ Updating stats..."+(total_players_for_update-players_for_update.length+1)+" / "+total_players_for_update;
+		stats_updater_ready = false;
 		
 		OWAPI.id = current_player.id;
 		OWAPI.onSuccess = update_player_success;
 		OWAPI.onFail = update_player_fail;
 		OWAPI.getStats();
-	} else {
-		// all players updated
-		if ( ! silent_update ) {
-			var msg = "Updated "+(total_players_for_update-stat_update_fails)+" players";
-			if ( stat_update_fails > 0 ) {
-				msg += ", "+stat_update_fails+" players failed";
-			}
-			stat_update_fails = 0;
-			alert(msg);
-		}
-		setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
-		document.getElementById("update_active_stats_btn").value = "↻ Update active players";
-		redraw_teams();
-		fill_player_stats_dlg();
-		stats_updater_ready = false;
-		// ensure next request will not be sent too early
-		setTimeout( function(){stats_updater_ready = true;}, min_api_request_interval);
-	}
+	} 
 }
 
 function update_player_success() {
 	var player = players_for_update.shift();
+	stats_updater_ready = false;
+	dbg_msg("upd sc. id="+player.id);
 	
 	player.level = OWAPI.level;
 	
@@ -962,7 +951,6 @@ function update_player_success() {
 		player.display_name = OWAPI.display_name;
 	}
 
-	
 	if( document.getElementById("update_sr").checked ) {
 		if ( OWAPI.sr != 0 ) {
 			// check if SR was manually edited and update option checked
@@ -984,33 +972,73 @@ function update_player_success() {
 	player.top_heroes = OWAPI.top_heroes;
 	
 	stats_update_current_retry = 0;
-	setTimeout( update_next_player_stats, min_api_request_interval );
+	//setTimeout( update_next_player_stats, min_api_request_interval );
+	setTimeout( function(){stats_updater_ready = true; dbg_msg("set rdy=1");}, min_api_request_interval-1);
+	
+	if ( players_for_update.length > 0 ) {
+		update_next_player_stats();
+	} else {
+		update_stats_finish();
+	}
 }
 
 function update_player_fail( msg ) {
+	setTimeout( function(){stats_updater_ready = true; dbg_msg("set rdy=1");}, min_api_request_interval-1);
+	
 	if ( OWAPI.can_retry = true && (stats_update_current_retry <= stats_update_max_retry) ) {
+		dbg_msg("upd fail rty="+stats_update_current_retry);
 		// log error and retry
 		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
 		stats_update_current_retry++;
-		setTimeout( update_next_player_stats, min_api_request_interval );
+		setTimeout( update_next_player_stats, min_api_request_interval+100 );
 		return;
 	}
+	dbg_msg("upd fail");
 	stat_update_fails++;
 	players_for_update.shift();
 	stats_update_current_retry = 0;
 	
+	
 	if( silent_update_errors ) {
 		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
-		setTimeout( update_next_player_stats, min_api_request_interval );
+		//setTimeout( update_next_player_stats, min_api_request_interval );
 	} else {
 		if( confirm( "Error on updating player "+OWAPI.id+": "+msg+". Continue updating stats?" ) ) {
-			setTimeout( update_next_player_stats, min_api_request_interval );
+			//setTimeout( update_next_player_stats, min_api_request_interval );
 		} else {
 			setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 			document.getElementById("update_active_stats_btn").value = "↻ Update stats";
 			redraw_teams();
+			players_for_update.splice( 0, players_for_update.length );
+			return; // break update loop
 		}
 	}
+	
+	if ( players_for_update.length > 0 ) {
+		update_next_player_stats();
+	} else {
+		update_stats_finish();
+	}
+}
+
+function update_stats_finish() {
+	// all players updated
+	dbg_msg("upd finish");
+	if ( ! silent_update ) {
+		var msg = "Updated "+(total_players_for_update-stat_update_fails)+" players";
+		if ( stat_update_fails > 0 ) {
+			msg += ", "+stat_update_fails+" players failed";
+		}
+		stat_update_fails = 0;
+		alert(msg);
+	}
+	setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
+	document.getElementById("update_active_stats_btn").value = "↻ Update active players";
+	redraw_teams();
+	fill_player_stats_dlg();
+	stats_updater_ready = false;
+	// ensure next request will not be sent too early
+	//setTimeout( function(){stats_updater_ready = true; dbg_msg("set rdy=1");}, min_api_request_interval);
 }
 
 function update_all_stats() {
@@ -1462,11 +1490,13 @@ function update_picked_player( selected_id ) {
 	var player_struct = find_player_by_id(selected_id);
 	
 	if ( players_for_update.length > 0 ) {
+		dbg_msg("upd picked add to Q");
 		// update in progress - add to queue
 		players_for_update.push( player_struct );
 		total_players_for_update++;
 	} else {
 		// initiate update
+		dbg_msg("upd picked init");
 		players_for_update.splice( 0, players_for_update.length );
 		players_for_update.push( player_struct );
 		total_players_for_update = players_for_update.length;
@@ -2544,6 +2574,13 @@ function getScrollbarWidth() {
 	outer.parentNode.removeChild(outer);
 
 	return widthNoScroll - widthWithScroll;
+}
+
+function dbg_msg( msg_text) {
+	if (stats_update_dbg) {
+		var d = new Date();
+		document.getElementById("stats_update_log").innerHTML += d.toISOString()+" : "+msg_text+"</br>";
+	}
 }
 
 </script>
