@@ -123,6 +123,10 @@ input.team-title:hover {
 	font-size: 8pt;
 }
 
+span.sr-edited {
+	color: blue;
+}
+
 .player-name {
 	display: inline;
 	font-size: 16pt;
@@ -225,6 +229,10 @@ li {
 	height: 1.2em;
 	float: right;
 	filter: opacity(60%);
+}
+
+.class-edited {
+	filter: drop-shadow(0px 0px 2px #00BFFF) opacity(60%);
 }
 
 .secondary-class {
@@ -699,7 +707,10 @@ function draw_player( player_struct, team_id ) {
 	}
 	text_node = document.createTextNode( sr_text );
 	sr_display.appendChild(text_node);
-	sr_display.appendChild(text_node);
+	//sr_display.appendChild(text_node);
+	if( player_struct.se === true ) {
+		sr_display.classList.add("sr-edited");
+	}
 	icon_sr.appendChild(sr_display);
 	
 	player_icon.appendChild(icon_sr);
@@ -728,7 +739,10 @@ function draw_player( player_struct, team_id ) {
 			var class_icon = document.createElement("img");
 			class_icon.className = "class-icon";
 			if( i != 0 )  {
-				class_icon.className += " secondary-class";
+				class_icon.classList.add("secondary-class");
+			}
+			if( player_struct.ce === true ) {
+				class_icon.classList.add("class-edited");
 			}
 			class_icon.src = "class_icons/"+player_struct.top_classes[i]+".png";
 			class_icon.title = player_struct.top_classes[i];
