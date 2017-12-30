@@ -1819,11 +1819,11 @@ function add_player_success() {
 	
 	redraw_teams();
 	
+	// show and highlight new player
 	if (new_player_team == lobby) {
-		// show and highlight new player
 		setTimeout( function() {document.getElementById(new_player.id).scrollIntoView(false);}, 100 );
-		setTimeout( function() {highlight_player( new_player.id );}, 500 );
 	}
+	setTimeout( function() {highlight_player( new_player.id );}, 500 );
 }
 
 function add_player_fail( msg ) {
