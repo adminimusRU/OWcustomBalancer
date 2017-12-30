@@ -559,7 +559,8 @@ var OWAPI = {
 		
 		var hero_playtime_sorted = [];
 		for (var hero_name in hero_playtime ) {
-			hero_playtime_sorted.push( { hero: hero_name, playtime: Math.round(hero_playtime[hero_name],1)} );
+			var current_hero_playtime = Math.round(hero_playtime[hero_name] * 100) / 100;
+			hero_playtime_sorted.push( { hero: hero_name, playtime: current_hero_playtime} );
 		}
 		
 		hero_playtime_sorted.sort( function(hero1, hero2) {
