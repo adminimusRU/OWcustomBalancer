@@ -1800,7 +1800,16 @@ function add_player_success() {
 		top_heroes: OWAPI.top_heroes,
 	};
 	
-	lobby.push(new_player);
+	var new_player_team;
+	
+	if (team1.length < team_size ) {
+		new_player_team = team1;
+	} else if (team2.length < team_size ) {
+		new_player_team = team2;
+	} else {
+		new_player_team = lobby;
+	}
+	new_player_team.push(new_player);
 	
 	document.getElementById("new_player_id").value = "";
 	setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
@@ -1810,9 +1819,11 @@ function add_player_success() {
 	
 	redraw_teams();
 	
-	// show and highlight new player
-	setTimeout( function() {document.getElementById(new_player.id).scrollIntoView(false);}, 100 );
-	setTimeout( function() {highlight_player( new_player.id );}, 500 );
+	if (new_player_team == lobby) {
+		// show and highlight new player
+		setTimeout( function() {document.getElementById(new_player.id).scrollIntoView(false);}, 100 );
+		setTimeout( function() {highlight_player( new_player.id );}, 500 );
+	}
 }
 
 function add_player_fail( msg ) {
