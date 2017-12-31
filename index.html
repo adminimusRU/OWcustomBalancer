@@ -499,15 +499,17 @@ var OWAPI = {
 							OWAPI.can_retry = false;
 							throw new Error("Player has no stats in region "+region.toUpperCase());
 						}
-						OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
-						OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
-						OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
+						if ( stats_obj[region].stats.competitive !== null ) {
+							OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
+							OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
+							OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
+							
+							var hero_stats = OWAPI.parseHeroStats( stats_obj[region].heroes );
+							OWAPI.top_classes = OWAPI.calculateTopClasses( hero_stats );
+							OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
+						}
 						
-						var hero_stats = OWAPI.parseHeroStats( stats_obj[region].heroes );
-						OWAPI.top_classes = OWAPI.calculateTopClasses( hero_stats );
-						OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
-						
-						OWAPI.onSuccess.call();					
+						OWAPI.onSuccess.call();				
 					}
 					catch (err) {
 						if(typeof OWAPI.onFail == "function") {
