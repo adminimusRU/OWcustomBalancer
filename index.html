@@ -892,7 +892,7 @@ function calc_player_sr( player ) {
 	if (document.getElementById("balance_adjust_sr").checked) {
 		if ( player.top_classes !== undefined ) {
 			var top_class = player.top_classes[0];
-			if( top_class !== undefined ) {
+			if( (top_class !== undefined) && (player.top_classes.length == 1) ) {
 				player_sr = Math.round( player_sr * Number(document.getElementById("balance_adjust_sr_"+top_class).value)/100 );
 			}
 		}
@@ -1861,6 +1861,7 @@ function import_lobby_dlg() {
 	document.getElementById("dlg_import_export_format").style.display = "block";
 	document.getElementById("dlg_operation").innerHTML = "Import";
 	document.getElementById("dlg_format_value").value = "json";
+	document.getElementById("dlg_format_value").options.namedItem("dlg_format_value_csv").style.display = "none";
 	document.getElementById("dlg_textarea").value = "";
 	document.getElementById("dlg_textarea").style.display = "inline";
 	document.getElementById("dlg_textarea").select();
@@ -1963,6 +1964,18 @@ function change_export_format() {
 		for( i in lobby) {
 			var player_id = lobby[i].id.trim().replace("-", "#");
 			export_str += player_id + "\n";
+		}
+	} else if ( document.getElementById("dlg_format_value").value == "csv" ) {
+		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class\n";
+		for( i in lobby) {
+			var player_id = lobby[i].id.trim().replace("-", "#");
+			var main_class = "";
+			if( lobby[i].top_classes[0] !== undefined ) main_class = lobby[i].top_classes[0];
+			var secondary_class = "";
+			if( lobby[i].top_classes[1] !== undefined ) secondary_class = lobby[i].top_classes[1];
+			
+			export_str += player_id+","+lobby[i].display_name+","+lobby[i].sr
+						+","+lobby[i].level+","+main_class+","+secondary_class+"\n";
 		}
 	}
 	
@@ -2365,8 +2378,9 @@ function init_popup_dlg() {
 	document.getElementById("dlg_title").innerHTML = "";
 	document.getElementById("dlg_import_export_format").style.display = "none";
 	document.getElementById("dlg_format_value").onchange = function(event){;};
+	document.getElementById("dlg_format_value").options.namedItem("dlg_format_value_csv").style.display = "";
 	document.getElementById("dlg_setup_share").style.display = "none";
-	document.getElementById("dlg_setup_share_options").style.display = "none";
+	document.getElementById("dlg_setup_share_options").style.display = "none";	
 	document.getElementById("dlg_textarea").style.display = "none";
 	document.getElementById("dlg_player_edit").style.display = "none";
 	document.getElementById("dlg_player_name_edited").style.visibility = "";
@@ -2618,7 +2632,7 @@ function dbg_msg( msg_text) {
 <body >
 
 <div class="page-title">Overwatch custom game balancer</div>
-<div class="copyright">2017 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Data from <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
+<div class="copyright">2017-2018 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Data from <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
 <br/>
 
 <br/>
@@ -2788,6 +2802,7 @@ function dbg_msg( msg_text) {
 				<select id="dlg_format_value">
 					<option value="json">JSON (full info)</option>
 					<option value="battletags">plain text (BattleTags only)</option>
+					<option value="csv" id="dlg_format_value_csv">CSV (for Excel)</option>
 				</select>
 			</div>
 			<div id="dlg_setup_share" class="dlg_options">
