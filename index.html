@@ -1516,6 +1516,10 @@ function update_picked_player( selected_id ) {
 	
 	var player_struct = find_player_by_id(selected_id);
 	
+	if ( player_struct.fake_id == true ) {
+		return;
+	}
+	
 	if ( players_for_update.length > 0 ) {
 		dbg_msg("upd picked add to Q");
 		// update in progress - add to queue
@@ -2515,7 +2519,8 @@ function create_random_player( id ) {
 			level: Math.round(Math.random()*2000),
 			empty: false,
 			top_classes: top_classes,
-			top_heroes: top_heroes
+			top_heroes: top_heroes,
+			fake_id: true
 		};
 }
 
@@ -2752,7 +2757,7 @@ function dbg_msg( msg_text) {
 				</div>
 				<br/>
 				<div>
-					<input class="medium-btn" type="button" onclick="fill_test_teams();" value="Add test players" title="Generate random players for tests" style="float: right; display: none;"/>
+					<input class="medium-btn" type="button" onclick="fill_test_teams();" value="Add test players" title="Generate random players for tests" style="float: right;"/>
 				</div>
 			</div>
 			
