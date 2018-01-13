@@ -1012,7 +1012,7 @@ function update_player_success() {
 function update_player_fail( msg ) {
 	setTimeout( function(){stats_updater_ready = true; dbg_msg("set rdy=1");}, min_api_request_interval-1);
 	
-	if ( OWAPI.can_retry = true && (stats_update_current_retry <= stats_update_max_retry) ) {
+	if ( OWAPI.can_retry == true && (stats_update_current_retry <= stats_update_max_retry) ) {
 		dbg_msg("upd fail rty="+stats_update_current_retry);
 		// log error and retry
 		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
