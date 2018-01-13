@@ -501,12 +501,20 @@ var OWAPI = {
 						}
 						if ( stats_obj[region].stats.competitive !== null ) {
 							OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
+							if ( OWAPI.sr == 0 ) {
+								OWAPI.can_retry = false;
+								throw new Error("Player has 0 SR, not completed placements in current season");
+							}
+							
 							OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
 							OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
 							
 							var hero_stats = OWAPI.parseHeroStats( stats_obj[region].heroes );
 							OWAPI.top_classes = OWAPI.calculateTopClasses( hero_stats );
 							OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
+						} else {
+							OWAPI.can_retry = false;
+							throw new Error("Player has no stats, probably not completed placements in current season");
 						}
 						
 						OWAPI.onSuccess.call();				
