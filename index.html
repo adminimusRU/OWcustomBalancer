@@ -501,10 +501,6 @@ var OWAPI = {
 						}
 						if ( stats_obj[region].stats.competitive !== null ) {
 							OWAPI.sr = Number(stats_obj[region].stats.competitive.overall_stats.comprank);
-							if ( OWAPI.sr == 0 ) {
-								OWAPI.can_retry = false;
-								throw new Error("Player has 0 SR, not completed placements in current season");
-							}
 							
 							OWAPI.level = stats_obj[region].stats.competitive.overall_stats.prestige*100 + stats_obj[region].stats.competitive.overall_stats.level,
 							OWAPI.time_played = Number(stats_obj[region].stats.competitive.game_stats.time_played);
@@ -512,10 +508,7 @@ var OWAPI = {
 							var hero_stats = OWAPI.parseHeroStats( stats_obj[region].heroes );
 							OWAPI.top_classes = OWAPI.calculateTopClasses( hero_stats );
 							OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
-						} else {
-							OWAPI.can_retry = false;
-							throw new Error("Player has no stats, probably not completed placements in current season");
-						}
+						} 
 						
 						OWAPI.onSuccess.call();				
 					}
@@ -985,6 +978,10 @@ function update_player_success() {
 				player.sr = OWAPI.sr;
 				player.se = false;
 			}
+		} else {
+			// log error
+			var msg = "Player has 0 SR, not completed placements in current season";
+			document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
 		}
 	}
 	
@@ -1816,6 +1813,12 @@ function add_player_success() {
 		top_classes: OWAPI.top_classes,
 		top_heroes: OWAPI.top_heroes,
 	};
+	
+	if ( new_player.sr == 0 ) {
+		// log error
+		var msg = "Player has 0 SR, not completed placements in current season";
+		document.getElementById("stats_update_log").innerHTML += OWAPI.id+": "+msg+"</br>";
+	}
 	
 	var new_player_team;
 	
