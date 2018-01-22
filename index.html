@@ -1616,11 +1616,12 @@ function calc_class_unevenness( temp_team1, temp_team2 ) {
 	return Math.round( avg_class_unevenness, 1 );
 }
 
-// checks if current composition variant meets restrictions
-// return value: boolean, true if all restrictions passed
-function check_balance_restrictions( temp_team1, temp_team2 ) {
+// calculates measure of one-trick ponie conflicts across teams
+// return value: measure of measure, 0 = no conflicts
+function calc_otp_conflicts( temp_team1, temp_team2 ) {
 	if ( document.getElementById("balance_separate_otps").checked ) {
 		var temp_teams = [temp_team1, temp_team2];
+		var otp_conflicts_count = 0;
 		for( t in temp_teams ) {
 			// array of one-trick ponies (hero names) in current team
 			var current_team_otps = []; 
@@ -1630,13 +1631,21 @@ function check_balance_restrictions( temp_team1, temp_team2 ) {
 					if (current_team_otps.indexOf(current_otp) == -1) {
 						current_team_otps.push( current_otp );
 					} else {
-						return false;
+						otp_conflicts_count++;
 					}
 				}
 			}
 		}
+		
+		return otp_conflicts_count * 10000;	
+	} else {
+		return 0;
 	}
-	
+}
+
+// checks if current composition variant meets restrictions
+// return value: boolean, true if all restrictions passed
+function check_balance_restrictions( temp_team1, temp_team2 ) {
 	if ( document.getElementById("balance_enable_captains").checked ) {
 		// captains must stay in their teams
 		var captain1_index = get_player_index( team1_captain, temp_team1 );
@@ -1669,10 +1678,15 @@ function generate_team_combination(last) {
 		var opposite_sr = calculate_team_sr(opposite_team, true);
 		var sr_diff = Math.abs( composition_sr - opposite_sr );
 		var class_unevenness = calc_class_unevenness( new_composition_players, opposite_team );
+		var otp_conflicts = calc_otp_conflicts( new_composition_players, opposite_team );
 		
 		// balance target function. Minimum BTF value = best balance
 		var class_unevenness_value = Number(document.getElementById("balance_class_uneveness_value").value);
-		var btf = Math.round( (class_unevenness*class_unevenness_value + (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value))/100, 1 );
+		var btf = Math.round( 
+			(class_unevenness*class_unevenness_value 
+			+ (sr_diff/balance_max_sr_diff*100)*(100-class_unevenness_value)
+			+ otp_conflicts )
+			/100, 1 );
 		
 		// balance restrictions check
 		var restrictions_passed = check_balance_restrictions( new_composition_players, opposite_team  );
@@ -1682,13 +1696,13 @@ function generate_team_combination(last) {
 			sr_diff: sr_diff,
 			players: new_composition_players,
 			class_unevenness: class_unevenness,
+			otp_conflicts: otp_conflicts,
 			btf: btf,
 			restrictions: restrictions_passed
 		};
 		balance_team_combinations.push( new_composition );
 		
 		if( (btf < best_btf) && restrictions_passed ) {
-		//if( btf < best_btf ) {
 			best_btf = btf;
 			best_btf_index = balance_team_combinations.length-1;
 		}
@@ -1750,11 +1764,13 @@ function balance_teams() {
 	// balance debug
 	if ( document.getElementById("balance_dbg").checked ) {
 		document.getElementById("balance_dbg_test_result").style.display = "block";
-		var res = "#,";
+		var res = "";
+		res += "best # " + best_btf_index + "<br/>";
+		res += "#,";
 		for (var i=1; i<=team_size; i++ ) {
 			res += "player"+i+",";
 		}
-		res += "=,SR diff,class unevenness,btf,restrictions<br/>";
+		res += "=,SR diff,class unevenness,otp conflicts,btf,restrictions<br/>";
 		
 		//balance_team_combinations.sort(function(comb1, comb2){  return comb1.sr_diff-comb2.sr_diff; });
 		if (document.getElementById("balance_dbg_sort").checked) {
@@ -1768,11 +1784,10 @@ function balance_teams() {
 			}
 			res += "=," + balance_team_combinations[i].sr_diff + "," 
 				+ balance_team_combinations[i].class_unevenness + ","
+				+ balance_team_combinations[i].otp_conflicts + ","
 				+ balance_team_combinations[i].btf + ","
 				+ balance_team_combinations[i].restrictions + "<br/>";
-			
 		}
-		res = res +  "best # " + best_btf_index;
 		document.getElementById("balance_dbg_test_result").innerHTML = res;
 	}
 }	
