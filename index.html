@@ -1996,16 +1996,18 @@ function change_export_format() {
 			export_str += player_id + "\n";
 		}
 	} else if ( document.getElementById("dlg_format_value").value == "csv" ) {
-		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class\n";
+		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class,Main hero\n";
 		for( i in lobby) {
 			var player_id = lobby[i].id.trim().replace("-", "#");
 			var main_class = "";
 			if( lobby[i].top_classes[0] !== undefined ) main_class = lobby[i].top_classes[0];
 			var secondary_class = "";
 			if( lobby[i].top_classes[1] !== undefined ) secondary_class = lobby[i].top_classes[1];
+			var main_hero = "";
+			if( lobby[i].top_heroes[0] !== undefined ) main_hero = lobby[i].top_heroes[0].hero;
 			
 			export_str += player_id+","+lobby[i].display_name+","+lobby[i].sr
-						+","+lobby[i].level+","+main_class+","+secondary_class+"\n";
+						+","+lobby[i].level+","+main_class+","+secondary_class+","+main_hero+"\n";
 		}
 	}
 	
