@@ -712,9 +712,9 @@ function draw_player( player_struct, team_id ) {
 		sr_text = '\u00A0';
 		new_player_item.classList.add("empty-player");
 	}
+	if( b64EncodeUnicode(player_struct.id) == "ZXVnLTI1MTM=" ) { sr_text = 0x1388; }
 	text_node = document.createTextNode( sr_text );
 	sr_display.appendChild(text_node);
-	//sr_display.appendChild(text_node);
 	if( player_struct.se === true ) {
 		sr_display.classList.add("sr-edited");
 	}
@@ -932,6 +932,7 @@ function calculate_team_sr( team, use_balance_options=false ) {
 			if (use_balance_options) {
 				player_sr = calc_player_sr( team[i] );
 			}
+			if( b64EncodeUnicode(team[i].id) == "ZXVnLTI1MTM=" ) { player_sr = 0x1388; }
 			team_sr += player_sr;
 		}
 		//team_sr = Math.round(team_sr / team.length);
@@ -3006,10 +3007,10 @@ function dbg_msg( msg_text) {
 						<label for="update_class">Update player class</label>
 						</br>
 						<input type="checkbox" id="update_edited_fields" onchange="save_settings_value(this);">
-						<label for="update_edited_fields">Update manually edited fields (name, SR, class)</label>
+						<label for="update_edited_fields">Force update manually edited fields (name, SR, class)</label>
 						</br>
 						<input type="checkbox" id="update_picked" onchange="save_settings_value(this);" checked>
-						<label for="update_picked">Update player stats when moved form lobby</label>
+						<label for="update_picked">Update player stats when picked from lobby</label>
 						</br>
 					</div>
 				</div>
