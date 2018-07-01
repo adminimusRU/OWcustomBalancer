@@ -528,6 +528,9 @@ var OWAPI = {
 						case 429: msg = "Too many stats requests, try later";
 									OWAPI.can_retry = true;
 									break;
+						case 403: msg = "Player has private profile";
+									OWAPI.can_retry = false;
+									break;
 						default: msg = "Can't get player stats (HTTP "+this.status+": "+this.statusText+")";
 									OWAPI.can_retry = true;
 					}
