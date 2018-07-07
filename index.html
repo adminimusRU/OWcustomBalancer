@@ -1914,6 +1914,11 @@ function import_lobby() {
 				// try to parse json
 				var import_struct = JSON.parse(import_str);
 				
+				// check format
+				if ( import_struct.format_version > 2 ) {
+					throw "Unsupported format version";
+				}
+				
 				for( var i=0; i<import_struct.players.length; i++) {
 					// check duplicates
 					if (find_player_by_id(import_struct.players[i].id) !== undefined ) {
@@ -1928,15 +1933,17 @@ function import_lobby() {
 						import_struct.players[i].top_heroes = [];
 					}
 					
-					// convert offence and defence classes to dps
-					if( (import_struct.players[i].top_classes[0] == "offence") || (import_struct.players[i].top_classes[0] == "defence") ) {
-						import_struct.players[i].top_classes[0] = "dps";
-					}
-					if( (import_struct.players[i].top_classes[1] == "offence") || (import_struct.players[i].top_classes[1] == "defence") ) {
-						import_struct.players[i].top_classes[1] = "dps";
-					}
-					if( (import_struct.players[i].top_classes[0] == "dps") && (import_struct.players[i].top_classes[1] == "dps") ) {
-						import_struct.players[i].top_classes.pop();
+					if ( import_struct.format_version == 1 ) {
+						// convert offence and defence classes to dps
+						if( (import_struct.players[i].top_classes[0] == "offence") || (import_struct.players[i].top_classes[0] == "defence") ) {
+							import_struct.players[i].top_classes[0] = "dps";
+						}
+						if( (import_struct.players[i].top_classes[1] == "offence") || (import_struct.players[i].top_classes[1] == "defence") ) {
+							import_struct.players[i].top_classes[1] = "dps";
+						}
+						if( (import_struct.players[i].top_classes[0] == "dps") && (import_struct.players[i].top_classes[1] == "dps") ) {
+							import_struct.players[i].top_classes.pop();
+						}
 					}
 					
 					lobby.splice(lobby.length, 0, import_struct.players[i]);
@@ -2001,7 +2008,7 @@ function change_export_format() {
 	var export_str = "";
 	if ( document.getElementById("dlg_format_value").value == "json" ) {
 		var export_struct = {
-			format_version: 1,
+			format_version: 2,
 			players: lobby
 			};
 		export_str = JSON.stringify(export_struct);
