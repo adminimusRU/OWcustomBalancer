@@ -400,31 +400,32 @@ var active_players_total_sr = 0;
 var best_btf = 0;
 var best_btf_index = 0;
 var balance_max_sr_diff = 1000;
-var balance_exclude_classes = [ "defence" ];
+var balance_exclude_classes = [  ];
 
 // hero list for calculating main classes
 var hero_classes = {
-	reaper:		"offence",
-	pharah:		"offence",
-	soldier76:	"offence",
-	genji:		"offence",
-	tracer:		"offence",
-	sombra:		"offence",
-	mccree:		"offence",
-	doomfist:	"offence",
+	reaper:		"dps",
+	pharah:		"dps",
+	soldier76:	"dps",
+	genji:		"dps",
+	tracer:		"dps",
+	sombra:		"dps",
+	mccree:		"dps",
+	doomfist:	"dps",
 	
-	torbjorn:	"defence",
-	hanzo:		"defence",
-	mei:		"defence",
-	bastion:	"defence",
-	widowmaker:	"defence",
-	junkrat:	"defence",
+	torbjorn:	"dps",
+	hanzo:		"dps",
+	mei:		"dps",
+	bastion:	"dps",
+	widowmaker:	"dps",
+	junkrat:	"dps",
+	
+	symmetra:	"dps",
 	
 	mercy:		"support",
 	ana:		"support",
 	lucio:		"support",
 	zenyatta:	"support",
-	symmetra:	"support",
 	moira:		"support",
 	brigitte:	"support",
 	
@@ -436,8 +437,7 @@ var hero_classes = {
 	reinhardt:	"tank",
 };
 var class_names = [
-	"offence",
-	"defence",
+	"dps",
 	"support",
 	"tank"
 ];
@@ -580,8 +580,7 @@ var OWAPI = {
 	// returns top 2 hero classes
 	calculateTopClasses: function calculate_top_classes( hero_playtime ) {
 		var class_playtime = {
-			offence: 0,
-			defence: 0,
+			dps: 0,
 			tank: 0,
 			support: 0
 			};
@@ -1929,6 +1928,17 @@ function import_lobby() {
 						import_struct.players[i].top_heroes = [];
 					}
 					
+					// convert offence and defence classes to dps
+					if( (import_struct.players[i].top_classes[0] == "offence") || (import_struct.players[i].top_classes[0] == "defence") ) {
+						import_struct.players[i].top_classes[0] = "dps";
+					}
+					if( (import_struct.players[i].top_classes[1] == "offence") || (import_struct.players[i].top_classes[1] == "defence") ) {
+						import_struct.players[i].top_classes[1] = "dps";
+					}
+					if( (import_struct.players[i].top_classes[0] == "dps") && (import_struct.players[i].top_classes[1] == "dps") ) {
+						import_struct.players[i].top_classes.pop();
+					}
+					
 					lobby.splice(lobby.length, 0, import_struct.players[i]);
 					added_players.push( import_struct.players[i].id );
 				}
@@ -1937,7 +1947,7 @@ function import_lobby() {
 				redraw_teams();
 			}
 			catch(err) {
-				// try to parse as plain battletag list
+				// try to parse as plain battletag list?
 				alert("Incorrect import format");
 				return;
 			}
@@ -2378,6 +2388,17 @@ function restore_team( team, team_name ) {
 			if ( ! Array.isArray(team[i].top_heroes) ) {
 				team[i].top_heroes = [];
 			}
+			
+			// convert offence and defence classes to dps
+			if( (team[i].top_classes[0] == "offence") || (team[i].top_classes[0] == "defence") ) {
+				team[i].top_classes[0] = "dps";
+			}
+			if( (team[i].top_classes[1] == "offence") || (team[i].top_classes[1] == "defence") ) {
+				team[i].top_classes[1] = "dps";
+			}
+			if( (team[i].top_classes[0] == "dps") && (team[i].top_classes[1] == "dps") ) {
+				team[i].top_classes.pop();
+			}
 		}
 	}
 }
@@ -2796,7 +2817,7 @@ function dbg_msg( msg_text) {
 					How to use</span>
 				<br>
 				<ul>
-					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sesitive</li>
+					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sensitive</li>
 					<li>Move players with <strong>drag & drop</strong> or <strong>double click</strong></li>
 					<li>Click 'Balance teams' to automatically swap players between teams for best balance</li>
 				</ul>
@@ -2890,10 +2911,9 @@ function dbg_msg( msg_text) {
 					<div class="cell">Main class: </div>
 					<div class="cell">
 						<select id="dlg_main_class">
-							<option value="offence">offence</option>
+							<option value="dps">dps</option>
 							<option value="tank">tank</option>
 							<option value="support">support</option>
-							<option value="defence">defence</option>
 						</select>
 						<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
 					</div>
@@ -2903,10 +2923,9 @@ function dbg_msg( msg_text) {
 					<div class="cell">
 						<select id="dlg_secondary_class">
 							<option value="">-</option>
-							<option value="offence">offence</option>
+							<option value="dps">dps</option>
 							<option value="tank">tank</option>
 							<option value="support">support</option>
-							<option value="defence">defence</option>
 						</select>
 						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
 					</div>
@@ -2963,18 +2982,15 @@ function dbg_msg( msg_text) {
 						<label for="balance_adjust_sr">Adjust player SR by main class</label>
 						</br>
 						<div class="subgroup" id="balance_adjust_sr_sub">
-							<img src="class_icons/offence.png" style="height: 1em;"/>
-							<input disabled id="balance_adjust_sr_offence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="120" onchange="save_settings_value(this);"/>
-							% SR for offence mains </br>
+							<img src="class_icons/dps.png" style="height: 1em;"/>
+							<input disabled id="balance_adjust_sr_dps" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="120" onchange="save_settings_value(this);"/>
+							% SR for dps mains </br>
 							<img src="class_icons/tank.png" style="height: 1em;"/>
 							<input disabled id="balance_adjust_sr_tank" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="100" onchange="save_settings_value(this);"/>
 							% SR for tank mains </br>
 							<img src="class_icons/support.png" style="height: 1em;"/>
 							<input disabled id="balance_adjust_sr_support" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
 							% SR for support mains </br>
-							<img src="class_icons/defence.png" style="height: 1em;"/>
-							<input disabled id="balance_adjust_sr_defence" class="percent" type="number" size=3 min=0 max=200 autocomplete="off" value="80" onchange="save_settings_value(this);"/>
-							% SR for defence mains </br>
 						</div>
 						</br>
 											
@@ -3056,10 +3072,9 @@ var settings_list = [
 	"team1_name",
 	"team2_name",
 	"balance_adjust_sr",
-	"balance_adjust_sr_offence",
+	"balance_adjust_sr_dps",
 	"balance_adjust_sr_tank",
 	"balance_adjust_sr_support",
-	"balance_adjust_sr_defence",
 	"balance_class_uneveness_value",
 	"balance_separate_otps",
 	"balance_enable_captains",
