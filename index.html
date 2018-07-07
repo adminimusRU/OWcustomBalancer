@@ -485,9 +485,7 @@ var OWAPI = {
 		this.top_classes = [];
 		this.top_heroes = [];
 		
-		//this.id = this.id.trim().replace("#", "-");
 		this.id = format_player_id( this.id );
-		//this.display_name = this.id.slice( 0, this.id.search("-") );
 		this.display_name = format_player_name( this.id );
 	
 		var xhttp = new XMLHttpRequest();
@@ -1537,7 +1535,7 @@ function update_picked_player( selected_id ) {
 		document.getElementById("update_active_stats_btn").value = "↻ Updating stats...1"+" / "+total_players_for_update;
 		
 		silent_update = true;
-		silent_update_errors = false;
+		silent_update_errors = true;
 		
 		update_next_player_stats();
 	}
