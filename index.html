@@ -435,6 +435,7 @@ var hero_classes = {
 	zarya:		"tank",
 	roadhog:	"tank",
 	reinhardt:	"tank",
+	wrecking_ball:	"tank",
 };
 var class_names = [
 	"dps",
@@ -2504,6 +2505,9 @@ function fill_player_stats_dlg() {
 			var hero_id = player_struct.top_heroes[i].hero;
 			if( hero_id == "soldier76") {
 				hero_id = "soldier-76";
+			}
+			if( hero_id == "wrecking_ball") {
+				hero_id = "wrecking-ball";
 			}
 			var img_node = document.createElement("img");
 			img_node.className = "hero-icon";
