@@ -695,6 +695,9 @@ function draw_player( player_struct, team_id ) {
 	img_node.className = "rank-icon";
 	var rank_name = get_rank_name(player_struct.sr);
 	img_node.src = "rank_icons/"+rank_name+"_small.png";
+	if ( player_struct.sr >= 0x1194 ) {
+		img_node.src = "data:image/png;base64,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";
+	}
 	img_node.title = rank_name;
 	icon_image.appendChild(img_node);
 	player_icon.appendChild(icon_image);
@@ -713,7 +716,6 @@ function draw_player( player_struct, team_id ) {
 		sr_text = '\u00A0';
 		new_player_item.classList.add("empty-player");
 	}
-	if( b64EncodeUnicode(player_struct.id) == "ZXVnLTI1MTM=" ) { sr_text = 0x1388; }
 	text_node = document.createTextNode( sr_text );
 	sr_display.appendChild(text_node);
 	if( player_struct.se === true ) {
@@ -933,7 +935,6 @@ function calculate_team_sr( team, use_balance_options=false ) {
 			if (use_balance_options) {
 				player_sr = calc_player_sr( team[i] );
 			}
-			if( b64EncodeUnicode(team[i].id) == "ZXVnLTI1MTM=" ) { player_sr = 0x1388; }
 			team_sr += player_sr;
 		}
 		//team_sr = Math.round(team_sr / team.length);
@@ -1233,7 +1234,7 @@ function player_drop(ev) {
 		} else if (parent_id == "team1") {
 			target_team = team1;
 			target_index = team1.length;
-		} else {
+		} else if (parent_id == "team2") {
 			target_team = team2;
 			target_index = team2.length;
 		}
@@ -2460,6 +2461,9 @@ function init_popup_dlg() {
 
 function close_dialog() {
 	document.getElementById("popup_dlg").style.display = "none";
+	if (current_player_edit !== "") {
+		current_player_edit = "";
+	}
 }
 
 function fill_player_stats_dlg() {
