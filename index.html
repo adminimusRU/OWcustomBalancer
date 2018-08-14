@@ -1442,7 +1442,7 @@ function player_contextmenu(ev) {
 	
 	fill_player_stats_dlg();
 	
-	document.getElementById("dlg_ok").onclick = function(event){close_dialog();change_player();};
+	document.getElementById("dlg_ok").onclick = function(event){change_player();close_dialog();};
 	
 	// disable context menu
 	return false;
