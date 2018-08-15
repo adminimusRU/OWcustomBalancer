@@ -476,6 +476,8 @@ var OWAPI = {
 	onSuccess: undefined, // Set to actual callback function before use
 	onFail: undefined, // Set to actual callback function before use
 	
+	is_processed: false,
+	
 	can_retry: false, // will be set to true on "soft" errors (like timeouts)
 	
 	getStats: function() {
@@ -488,6 +490,8 @@ var OWAPI = {
 		
 		this.id = format_player_id( this.id );
 		this.display_name = format_player_name( this.id );
+		
+		this.is_processed = false;
 	
 		var xhttp = new XMLHttpRequest();
 		xhttp.onload = function() {
@@ -510,11 +514,19 @@ var OWAPI = {
 							OWAPI.top_heroes = OWAPI.calculateTopHeroes( hero_stats );
 						} 
 						
-						OWAPI.onSuccess.call();				
+						if(typeof OWAPI.onSuccess == "function") {
+							if ( ! OWAPI.is_processed ) {
+								OWAPI.onSuccess.call();
+							}
+							OWAPI.is_processed = true;
+						}
 					}
 					catch (err) {
 						if(typeof OWAPI.onFail == "function") {
-							OWAPI.onFail.call( OWAPI, err.message );
+							if ( ! OWAPI.is_processed ) {
+								OWAPI.onFail.call( OWAPI, err.message );
+							}
+							OWAPI.is_processed = true;
 						}
 					}
 						
@@ -534,7 +546,10 @@ var OWAPI = {
 									OWAPI.can_retry = true;
 					}
 					if(typeof OWAPI.onFail == "function") {
-						OWAPI.onFail.call( OWAPI, msg );
+						if ( ! OWAPI.is_processed ) {
+							OWAPI.onFail.call( OWAPI, msg );
+						}
+						OWAPI.is_processed = true;
 					}
 				}
 			}
@@ -543,14 +558,20 @@ var OWAPI = {
 			var msg = "OWAPI timeout";
 			OWAPI.can_retry = true;
 			if(typeof OWAPI.onFail == "function") {
-				OWAPI.onFail.call( OWAPI, msg );
+				if ( ! OWAPI.is_processed ) {
+					OWAPI.onFail.call( OWAPI, msg );
+				}
+				OWAPI.is_processed = true;
 			}
 		};
 		
 		xhttp.onerror = function() {
 			var msg = "OWAPI error - "+this.statusText;
 			if(typeof OWAPI.onFail == "function") {
-				OWAPI.onFail.call( OWAPI, msg );
+				if ( ! OWAPI.is_processed ) {
+					OWAPI.onFail.call( OWAPI, msg );
+				}
+				OWAPI.is_processed = true;
 			}
 		};
 		
@@ -2730,7 +2751,7 @@ function dbg_msg( msg_text) {
 			
 			<span id="lobby_count">0</span> players<br/>
 			
-			<div style="display: flex;">
+			<div style="display: flex; align-items: baseline">
 				<label for="lobby_filter">Filter: &nbsp;</label>
 				<input id="lobby_filter" class="filter" type="text" size=35 autocomplete="off" placeholder="player name or battletag" value="" oninput="lobby_filter_change();"/> 
 				<span onclick="lobby_filter_clear();" style="cursor: default;" title="Clear filter" alt="Clear filter"> &#9003; </span>
