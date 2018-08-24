@@ -1260,7 +1260,7 @@ function player_drop(ev) {
 			target_index = team2.length;
 		}
 		
-		if ( dragged_team == target_team ) {
+		if ( dragged_team === target_team ) {
 			target_index = target_team.length - 1;
 		}
 	}
@@ -1288,7 +1288,7 @@ function player_drop(ev) {
 		target_team[target_index] = dragged_player;
 	}
 	
-	if ((target_team != lobby) && (dragged_team == lobby)) {
+	if ((target_team != lobby) && (dragged_team == lobby) && (drag_action != "remove")) {
 		update_picked_player( dragged_id );
 	}
 	
@@ -1889,7 +1889,50 @@ function add_player_success() {
 function add_player_fail( msg ) {
 	setTimeout( function(){toggle_owapi_buttons(true)}, min_api_request_interval);
 	document.getElementById("add_btn").innerHTML = "add player";
-	alert( msg );
+	//alert( msg );
+	if( confirm("Can't get player stats: "+msg+"\nAdd manually?") ) {
+		document.getElementById("new_player_id").value = "";
+	
+		// add player with empty stats
+		var new_player = {
+			id: OWAPI.id,
+			display_name: OWAPI.display_name, 
+			sr: 0,
+			level: 0,
+			top_classes: [],
+			top_heroes: [],
+		};
+		
+		var new_player_team;
+		if (team1.length < team_size ) {
+			new_player_team = team1;
+		} else if (team2.length < team_size ) {
+			new_player_team = team2;
+		} else {
+			new_player_team = lobby;
+		}
+		new_player_team.push(new_player);
+		redraw_teams();
+	
+		// show and highlight new player
+		setTimeout( function() {document.getElementById(new_player.id).scrollIntoView(false);}, 100 );
+		setTimeout( function() {highlight_player( new_player.id );}, 500 );
+		
+		// open edit dialog
+		current_player_edit = new_player.id;
+	
+		init_popup_dlg();
+		document.getElementById("popup_dlg").style.display = "block";
+		document.getElementById("dlg_title").innerHTML = new_player.display_name;
+		document.getElementById("dlg_player_edit").style.display = "block";
+		document.getElementById("dlg_class_select").style.display = "block";
+		document.getElementById("dlg_top_heroes").style.display = "block";
+		document.getElementById("dlg_update_player_stats").style.display = "block";
+		
+		fill_player_stats_dlg();
+		
+		document.getElementById("dlg_ok").onclick = function(event){change_player();close_dialog();};
+	}
 }
 
 function export_lobby() {
