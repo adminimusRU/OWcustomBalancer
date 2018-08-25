@@ -487,27 +487,12 @@ input[type=range]::-webkit-slider-thumb {
 	margin-top: -0.5em;
 }	
 
-input[id="roll_balance_priority"]::-moz-range-track {
+input[id="balance_priority"]::-moz-range-track {
   background: linear-gradient(to right, #dd3e54, #6be585, #dd3e54);
 }
-input[id="roll_balance_priority"]::-webkit-slider-runnable-track {
+input[id="balance_priority"]::-webkit-slider-runnable-track {
   background: linear-gradient(to right, #dd3e54, #6be585, #dd3e54);
 }
-
-input[id="roll_quality"]::-moz-range-track {
-  background: linear-gradient(to right, #dd3e54, #92ac74 43%, #6be585);
-}
-input[id="roll_quality"]::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, #dd3e54, #92ac74 43%, #6be585);
-}
-
-input[id="roll_coverage"]::-moz-range-track {
-  background: linear-gradient(to right, #6be585, #92ac74 60%, #dd3e54);
-}
-input[id="roll_coverage"]::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, #6be585, #92ac74 60%, #dd3e54);
-}
-
 
 .loader {
 	border: 0.3em solid #f3f3f3;
