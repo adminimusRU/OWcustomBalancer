@@ -19,13 +19,15 @@
 <script language="JavaScript" type="text/javascript">
 // global variables
 var lobby = [];
-var teams = [];
+var team1 = [];
+var team2 = [];
 
 var player_being_added;
 var player_being_edited;
 var lobby_filter_timer = 0;
 
 var Settings = get_default_settings();
+const storage_prefix = "owcgb_";
 
 // class icons in data:url strings
 var class_icons_datauri = {};
@@ -54,15 +56,14 @@ StatsUpdater.onWarning = on_stats_update_warning;
 <input id="new_player_id" name="new_player_id" type="text" size=35 placeholder="BattleTag" value="" onkeyup="new_player_keyup(event);"/> 
 <button onclick="add_player_click();" id="add_btn" >Add player</button>
 <br/>
+<br/>
 
 <div class="table workspace">
 	<div class="row">
 		<div class="cell workspace-cell">
 			<!-- lobby -->
 			
-			<div>
-			<span class="team-title">Lobby</span>
-			</div>
+			
 			
 			<div class="team-toolbar">
 			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_lobby();" value=" X "/>
@@ -75,7 +76,12 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_lobby('display_name');" value="&uarr;&darr;Az"/>
 			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_lobby('sr');" value="&uarr;&darr;123"/>
 			</div>
-			<br/>
+			
+			<div>
+			<span class="team-title">Lobby</span>
+			</div>
+			
+			
 					
 			<span id="lobby_count">0</span> players<br/>
 			
@@ -106,8 +112,12 @@ StatsUpdater.onWarning = on_stats_update_warning;
 		<div class="cell team-cell">
 			<div class="team-toolbar">
 			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1);redraw_teams();" value=" X "/>
-			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
+			<button title="Sort team by class" class="team_btn" onclick="sort_team(team1, 'class');redraw_teams();">
+				&uarr;&darr;
+				<img src="class_icons/dps.png" style="height: 0.9em;">
+			</button>
 			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team1, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team1, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
 			</div>
 			
 			<div>
@@ -149,8 +159,12 @@ StatsUpdater.onWarning = on_stats_update_warning;
 		<div class="cell team-cell">
 			<div class="team-toolbar">
 			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2);redraw_teams();" value=" X "/>
-			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
+			<button title="Sort team by class" class="team_btn" onclick="sort_team(team2, 'class');redraw_teams();">
+				&uarr;&darr;
+				<img src="class_icons/dps.png" style="height: 0.9em;">
+			</button>
 			<input title="Sort team by name" type="button" class="team_btn" onclick="sort_team(team2, 'display_name');redraw_teams();" value="&uarr;&darr;Az"/>
+			<input title="Sort team by SR" type="button" class="team_btn" onclick="sort_team(team2, 'sr');redraw_teams();" value="&uarr;&darr;123"/>
 			</div>
 			
 			<div>
@@ -166,9 +180,11 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			<br/>
 			
 			<div >
-				<input class="medium-btn" type="button" id="update_active_stats_btn" onclick="update_active_stats();" value="&#8635; Update active players" title="Update stats for active players"/>
+				<div style="display: flex">
+					<button class="medium-btn" id="update_active_stats_btn" onclick="update_active_stats();" value="" title="Update stats for active players">&#8635; Update <br/> active players</button>
 				
-				<input id="update_all_stats_btn" class="medium-btn" type="button" onclick="update_all_stats();" value="&#8635; Update all players" title="Update stats for all players" />
+					<button id="update_all_stats_btn" class="medium-btn" onclick="update_all_stats();" value="" title="Update stats for all players" />&#8635; Update <br/> all players</button>
+				</div>
 				
 				<input id="update_stats_stop_btn" class="big-btn" type="button" onclick="stop_stats_update();" value="Stop" style="display:none" />
 				<div>
@@ -588,11 +604,13 @@ StatsUpdater.onWarning = on_stats_update_warning;
 <div id="debug_log"></div>
 
 <script>
+// @todo port storage items from v1
+
 //restore saved players to teams
 restore_saved_teams();
 
 // restore settings
-var saved_settings_json = localStorage.getItem("settings");
+var saved_settings_json = localStorage.getItem( storage_prefix+"settings" );
 if ( saved_settings_json != null ) {
 	var saved_settings = JSON.parse(saved_settings_json);
 	for ( var i in Settings ) {
