@@ -24,12 +24,21 @@ function add_player_click() {
 }
 
 function apply_settings() {
+	var teams_changed = false;
+	
 	// check if team size changed
-	if ( (Settings["team_size"] != Number(document.getElementById("team_size").value)) && (teams.length > 0) ) {
-		if ( ! confirm("Team size setting changed. All teams will be deleted!") ) {
-			return;
+	var new_team_size = Number(document.getElementById("team_size").value);
+	if ( new_team_size != Settings["team_size"]  ) {
+		teams_changed = true;
+	}
+	if ( Settings["team_size"] > new_team_size ) {
+		// team size reduced - move excess players back to lobby
+		for ( let team of [team1, team2] ) {
+			while ( team.length > new_team_size ) {
+				let removed_player = team.pop();
+				lobby.push( removed_player );
+			}
 		}
-		reset_roll();
 	}
 	
 	for ( setting_name in Settings ) {
@@ -54,6 +63,12 @@ function apply_settings() {
 	localStorage.setItem( storage_prefix+"settings", JSON.stringify(Settings) );
 	apply_stats_updater_settings();
 	close_dialog( "popup_dlg_settings" );
+	
+	if (teams_changed) {
+		save_players_list();
+		redraw_lobby();
+		redraw_teams();
+	}
 }
 
 function clear_lobby() {
@@ -351,8 +366,16 @@ function test() {
 	
 }
 
+function update_active_stats() {
+	open_dialog("popup_dlg_stats_update_init");
+	document.getElementById("dlg_stats_update_ok").onclick = update_stats_ok.bind( this, "active" );
+	on_stats_update_limit_change();
+}
+
+
 function update_all_stats() {
 	open_dialog("popup_dlg_stats_update_init");
+	document.getElementById("dlg_stats_update_ok").onclick = update_stats_ok.bind( this, "all" );
 	on_stats_update_limit_change();
 }
 
@@ -368,7 +391,7 @@ function update_current_player_stats() {
 	document.getElementById("dlg_edit_player_update_result").innerHTML = "";
 }
 
-function update_stats_ok() {
+function update_stats_ok( scope ) {
 	close_dialog("popup_dlg_stats_update_init");
 	clear_stats_update_log();
 	
@@ -376,9 +399,13 @@ function update_stats_ok() {
 	var raw_value = Number(document.getElementById("stats_update_limit").value);
 	var stats_max_age = convert_range_log_scale( raw_value, 1, 3000 ) - 1;
 	
-	StatsUpdater.addToQueue( lobby, stats_max_age );
-	for( t in teams ) {
-		StatsUpdater.addToQueue( teams[t].players, stats_max_age);
+	switch ( scope ) {
+		case "all":
+			StatsUpdater.addToQueue( lobby, stats_max_age );
+		case "active":
+			StatsUpdater.addToQueue( team1, stats_max_age );
+			StatsUpdater.addToQueue( team2, stats_max_age );
+			break;
 	}
 }
 
@@ -483,6 +510,12 @@ function player_dblClick(ev) {
 	if ( new_team === undefined ) {
 		alert("Teams are full");
 		return;
+	}
+	
+	if (selected_team == lobby) {
+		if ( Settings.update_picked ) {
+			StatsUpdater.addToQueue( selected_player, Settings.update_picked_maxage, true );
+		}
 	}
 	
 	// move player
@@ -626,6 +659,12 @@ function player_drop(ev) {
 		StatsUpdater.removeFromQueue(dragged_id);
 	}
 	
+	if ((target_team != lobby) && (dragged_team == lobby) && (drag_action != "remove")) {
+		if ( Settings.update_picked ) {
+			StatsUpdater.addToQueue( dragged_player, Settings.update_picked_maxage, true );
+		}
+	}
+	
 	save_players_list();
 	redraw_lobby();
 	redraw_teams();
@@ -689,11 +728,11 @@ function on_player_stats_updated( player_id ) {
 function on_stats_update_complete() {
 	document.getElementById("stats_updater_status").innerHTML = "Update complete";
 	setTimeout( draw_stats_updater_status, StatsUpdater.min_api_request_interval );
-	//document.getElementById("roll_btn").disabled = false;
 	
-	document.getElementById("update_all_stats_btn").style.display = "";
-	document.getElementById("update_active_stats_btn").style.display = "";
-	document.getElementById("update_stats_stop_btn").style.display = "none";
+	//document.getElementById("update_all_stats_btn").style.display = "";
+	//document.getElementById("update_active_stats_btn").style.display = "";
+	//document.getElementById("update_stats_stop_btn").style.display = "none";
+	document.getElementById("update_stats_stop_btn").style.visibility = "hidden";
 	document.getElementById("stats_update_progress").style.visibility = "hidden";
 }
 
@@ -762,12 +801,13 @@ function on_stats_update_progress() {
 }
 
 function on_stats_update_start() {
-	document.getElementById("update_all_stats_btn").style.display = "none";
-	document.getElementById("update_active_stats_btn").style.display = "none";
-	document.getElementById("update_stats_stop_btn").style.display = "";
+	//document.getElementById("update_all_stats_btn").style.display = "none";
+	//document.getElementById("update_active_stats_btn").style.display = "none";
+	//document.getElementById("update_stats_stop_btn").style.display = "";
+	document.getElementById("update_stats_stop_btn").style.visibility = "visible";
 
 	document.getElementById("stats_update_progress").style.visibility = "visible";
-	clear_stats_update_log();
+	//clear_stats_update_log();
 	draw_stats_updater_status();
 }
 
