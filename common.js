@@ -137,6 +137,8 @@ function get_default_settings() {
 		update_class: true,
 		update_sr: true,
 		update_edited_fields: false,
+		update_picked: true,
+		update_picked_maxage: 15,
 	};
 }
 
