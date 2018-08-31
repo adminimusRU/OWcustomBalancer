@@ -185,8 +185,8 @@ StatsUpdater.onWarning = on_stats_update_warning;
 				
 					<button id="update_all_stats_btn" class="medium-btn" onclick="update_all_stats();" value="" title="Update stats for all players" />&#8635; Update <br/> all players</button>
 				</div>
-				
-				<input id="update_stats_stop_btn" class="big-btn" type="button" onclick="stop_stats_update();" value="Stop" style="display:none" />
+				<br/>
+				<input id="update_stats_stop_btn" class="big-btn" type="button" onclick="stop_stats_update();" value="Stop" style="visibility:hidden;" />
 				<div>
 					<div id="stats_update_processing" style="text-align: center;">
 						<progress id="stats_update_progress" value="0" max="100" style="width: 100%; visibility:hidden;">
@@ -532,6 +532,12 @@ StatsUpdater.onWarning = on_stats_update_warning;
 						</br>
 						<input type="checkbox" id="update_edited_fields">
 						<label for="update_edited_fields">Force update manually edited fields (name, SR, class)</label>
+						</br>
+						
+						<input type="checkbox" id="update_picked">
+						<label for="update_picked">Update picked players, if stats older than </label>
+						<input id="update_picked_maxage" name="update_picked_maxage" type="number" size=4 min=0 max=9999 style="width: 4em;" /> days
+						</br>
 					</div>
 				</div>
 				<br/>
@@ -572,7 +578,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			</br>
 			
 			<div>
-				<input id="dlg_ok" class="big-btn" type="button" value="OK" onclick="update_stats_ok();"/>
+				<input id="dlg_stats_update_ok" class="big-btn" type="button" value="OK"/>
 			</div>
 			
 		</div>
