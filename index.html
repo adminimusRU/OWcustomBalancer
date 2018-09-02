@@ -27,6 +27,7 @@ var player_being_edited;
 var lobby_filter_timer = 0;
 
 var Settings = get_default_settings();
+var ExportOptions = get_default_export_options();
 const storage_prefix = "owcgb_";
 
 // class icons in data:url strings
@@ -121,7 +122,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			</div>
 			
 			<div>
-			<input id="team1_name" type="text" class="team-title" value="Team 1" onchange="save_settings_value(this);">
+			<input id="team1_name" type="text" class="team-title" value="Team 1" autocomplete="off" onchange="save_team_name(this);">
 			</div>
 			
 			<span id="team1_sr">0</span> average SR<br/>
@@ -168,7 +169,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			</div>
 			
 			<div>
-			<input id="team2_name" type="text" class="team-title" value="Team 2" onchange="save_settings_value(this);">
+			<input id="team2_name" type="text" class="team-title" value="Team 2" autocomplete="off" onchange="save_team_name(this);">
 			</div>
 		
 			<span id="team2_sr">0</span> average SR<br/>
@@ -320,20 +321,15 @@ StatsUpdater.onWarning = on_stats_update_warning;
 				</select>
 			</div>
 			<div id="dlg_team_export_options" class="dlg_options" onchange="export_teams_dlg_change_format();">
-				<input type="checkbox" id="dlg_team_export_players">
-				<label for="dlg_team_export_players">Include players</label>
-				<br/>
 				<input type="checkbox" id="dlg_team_export_sr">
 				<label for="dlg_team_export_sr">Include SR</label>
 				<br/>
 				<input type="checkbox" id="dlg_team_export_classes">
 				<label for="dlg_team_export_classes">Include classes/roles</label>
 				<br/>
-				<input type="checkbox" id="dlg_team_export_captains">
+				<!--<input type="checkbox" id="dlg_team_export_captains">
 				<label for="dlg_team_export_captains">Mark team captains</label>
-				<br/>
-				<label for="dlg_team_export_columns">Table columns</label>
-				<input id="dlg_team_export_columns" type="number" min=1 max=999 value=1>
+				<br/>-->
 			</div>
 			
 			<textarea id="dlg_textarea_export_teams" rows="20" cols="80"></textarea>
@@ -615,6 +611,14 @@ StatsUpdater.onWarning = on_stats_update_warning;
 //restore saved players to teams
 restore_saved_teams();
 
+// restore team names
+for ( let id of ["team1_name", "team2_name"] ) {
+	var saved_team_name = localStorage.getItem( storage_prefix+id );
+	if ( saved_team_name !== null ) {
+		document.getElementById(id).value = saved_team_name;
+	}
+}
+
 // restore settings
 var saved_settings_json = localStorage.getItem( storage_prefix+"settings" );
 if ( saved_settings_json != null ) {
@@ -626,6 +630,17 @@ if ( saved_settings_json != null ) {
 	}
 }
 apply_stats_updater_settings();
+
+// restore export options
+var saved_export_options_json = localStorage.getItem( storage_prefix+"export_options" );
+if ( saved_export_options_json != null ) {
+	var saved_export_options = JSON.parse(saved_export_options_json);
+	for ( var i in ExportOptions ) {
+		if ( saved_export_options[i] !== undefined ) {
+			ExportOptions[i] = saved_export_options[i];
+		}
+	}
+}
 
 // adjust lobby margin to account scrollbar width
 var lobby_container = document.getElementsByClassName("lobby-container").item(0);

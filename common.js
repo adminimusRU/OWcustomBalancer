@@ -142,6 +142,14 @@ function get_default_settings() {
 	};
 }
 
+function get_default_export_options() {
+	return {
+		format: "image",
+		include_sr: true,
+		include_classes: true,
+	}
+}
+
 function get_player_index( player_id, team ) {
 	for( var i=0; i<team.length; i++) {
 		if ( player_id == team[i].id) {

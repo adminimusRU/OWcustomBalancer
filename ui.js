@@ -179,11 +179,17 @@ function export_teams_dlg_copy_html() {
 function export_teams_dlg_change_format() {
 	// @ToDo save format and options
 	var format = document.getElementById("dlg_team_export_format_value").value;
-	var include_players = document.getElementById("dlg_team_export_players").checked;
+	var include_players = true;
 	var include_sr = document.getElementById("dlg_team_export_sr").checked;
 	var include_classes = document.getElementById("dlg_team_export_classes").checked;
-	var include_captains = document.getElementById("dlg_team_export_captains").checked;
-	var table_columns = Number(document.getElementById("dlg_team_export_columns").value);
+	var include_captains = false;
+	var table_columns = 2;
+	
+	// save format
+	ExportOptions.format = format;
+	ExportOptions.include_sr = include_sr;
+	ExportOptions.include_classes = include_classes;
+	localStorage.setItem( storage_prefix+"export_options", JSON.stringify(ExportOptions) );
 	
 	var export_str = export_teams( format, include_players, include_sr, include_classes, include_captains, table_columns );
 	
@@ -213,6 +219,8 @@ function export_teams_dlg_change_format() {
 				
 		// calculate image size
 		var tmp_div = document.createElement("div");
+		tmp_div.style.position = "absolute";
+		tmp_div.style.visibility = "hidden";
 		tmp_div.innerHTML = export_str;
 		document.body.appendChild(tmp_div);
 		var img_width = tmp_div.firstChild.clientWidth;
@@ -256,6 +264,11 @@ function export_teams_dlg_change_format() {
 
 function export_teams_dlg_open() {
 	open_dialog("popup_dlg_export_teams");
+	
+	document.getElementById("dlg_team_export_format_value").value = ExportOptions.format;
+	document.getElementById("dlg_team_export_sr").checked = ExportOptions.include_sr;
+	document.getElementById("dlg_team_export_classes").checked = ExportOptions.include_classes;
+
 	export_teams_dlg_change_format();
 }
 
@@ -670,12 +683,8 @@ function player_drop(ev) {
 	redraw_teams();
 }
 
-function adjust_sr_change() {
-	var adjust_enabled = document.getElementById("adjust_sr").checked;
-	var inputs = document.getElementById("adjust_sr_sub").getElementsByTagName("INPUT");
-	for (var i=0; i<inputs.length; i++ ) {
-		inputs[i].disabled = ! adjust_enabled;
-	}
+function save_team_name( element ) {
+	localStorage.setItem( storage_prefix+element.id, element.value );
 }
 
 /*

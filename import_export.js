@@ -31,27 +31,28 @@ function export_lobby( format ) {
 	return export_str.trim();
 }
 
-/*function export_teams( format, include_players, include_sr, include_classes, include_captains, table_columns ) {
+function export_teams( format, include_players, include_sr, include_classes, include_captains, table_columns ) {
 	var setup_str = "";
 	
 	if ( format == "text-list" ) {
+		var teams = [team1, team2];
 		for ( var t in teams ) {
-			setup_str += teams[t].name + "\n";
+			setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
 			if ( include_players ) {
-				for ( var p in teams[t].players ) {
+				for ( var p in teams[t] ) {
 					var player_str = "";
 					if ( include_sr ) {
-						player_str += teams[t].players[p].sr + "\t";
+						player_str += teams[t][p].sr + "\t";
 					}
-					player_str += teams[t].players[p].display_name;
-					if ( include_captains ) {
+					player_str += teams[t][p].display_name;
+					/*if ( include_captains ) {
 						if ( teams[t].captain_index == p ) {
 							player_str += " \u265B";
 						}
-					}
+					}*/
 					if ( include_classes ) {
-						if ( teams[t].players[p].top_classes[0] != undefined ) {
-							player_str += "\t" + teams[t].players[p].top_classes[0];
+						if ( teams[t][p].top_classes[0] != undefined ) {
+							player_str += "\t" + teams[t][p].top_classes[0];
 						}
 					}
 					setup_str += player_str + "\n";
@@ -70,13 +71,14 @@ function export_lobby( format ) {
 
 function export_teams_html( format, include_players, include_sr, include_classes, include_captains, table_columns, draw_icons ) {
 	var setup_str = "";
+	var teams = [team1, team2];
 	
 	var title_colspan = 1;
 	if ( include_players ) {
 		if ( include_sr ) title_colspan++;
 		if ( include_classes ) title_colspan++;
 	}
-	var _team_size = teams[0].players.length;
+	var _team_size = Settings.team_size;
 	
 	setup_str += "<table style='border-collapse: collapse; background-color: white;'>\n";
 	
@@ -88,7 +90,7 @@ function export_teams_html( format, include_players, include_sr, include_classes
 			if ( t >= teams.length ) break;
 			setup_str += "<td colspan='"+title_colspan+
 				"' style='text-align: center;background-color: gray; color: white; border: 1px solid gray;'>";
-			setup_str += escapeHtml( teams[t].name );
+			setup_str += escapeHtml( document.getElementById("team"+(Number(t)+1)+"_name").value ); // @Todo proper team title
 			setup_str += "</td>";
 			// vertical spacer
 			setup_str += "<td style='width: 1em;'></td>";
@@ -104,12 +106,12 @@ function export_teams_html( format, include_players, include_sr, include_classes
 					
 					if ( include_sr ) {
 						setup_str += "<td style='text-align: right; padding-right: 0.5em; border-bottom: 1px solid gray;border-left: 1px solid gray;'>";
-						if ( p < teams[t].players.length ) {
+						if ( p < teams[t].length ) {
 							if (draw_icons) {
-								var rank_name = get_rank_name(teams[t].players[p].sr);
+								var rank_name = get_rank_name(teams[t][p].sr);
 								setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
 							} else {
-								setup_str += teams[t].players[p].sr;
+								setup_str += teams[t][p].sr;
 							}
 						}
 						
@@ -124,25 +126,25 @@ function export_teams_html( format, include_players, include_sr, include_classes
 						borders += "border-right: 1px solid gray;";
 					}
 					setup_str += "<td style='text-align: left; padding: 0.2em; white-space: nowrap; "+borders+"'>";
-					if ( p < teams[t].players.length ) {
-						setup_str += escapeHtml( teams[t].players[p].display_name );
+					if ( p < teams[t].length ) {
+						setup_str += escapeHtml( teams[t][p].display_name );
 						if ( include_captains ) {
-							if ( teams[t].captain_index == p ) {
+							/*if ( teams[t].captain_index == p ) {
 								if (draw_icons) {
 									setup_str += "<span style='color: green;'> \u265B</span>";
 								} else {
 									setup_str += " \u265B";
 								}
-							}
+							}*/
 						}
 					}
 					setup_str += "</td>";
 					
 					if ( include_classes ) {
 						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-right: 1px solid gray;'>";
-						if ( p < teams[t].players.length ) {
-							if ( teams[t].players[p].top_classes[0] != undefined ) {
-								var class_name = teams[t].players[p].top_classes[0];
+						if ( p < teams[t].length ) {
+							if ( teams[t][p].top_classes[0] != undefined ) {
+								var class_name = teams[t][p].top_classes[0];
 								if (draw_icons) {
 									var class_str = "<img style='filter: opacity(60%);' src='"+class_icons_datauri[class_name]+"'/>";
 								} else {
@@ -169,7 +171,7 @@ function export_teams_html( format, include_players, include_sr, include_classes
 	setup_str += "</table>\n";
 	
 	return setup_str;
-}*/
+}
 
 function import_lobby( format, import_str ) {
 	var added_players = [];
