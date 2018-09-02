@@ -229,15 +229,14 @@ StatsUpdater.onWarning = on_stats_update_warning;
 					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>Player list can be imported and exported with buttons above lobby</li>
-					<li>Balance algorithm tuning slider:
+					<li>Balance priority slider:
 						<ul>
 							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
 							<li>In intermediate position balancer will account both SR and hero classes in a given proportion</li>
 						</ul> 
 					</li>
 					<li>Click 'Balance teams' again to look through best balance variants</li>
-					<li>Team captains (if enabled) will not be moved by autobalancer</li>
-					<li>Page URL contains current team setup and can be shared</li>
+					<!--<li>Team captains (if enabled) will not be moved by autobalancer</li>-->
 				</ul>
 			</div>
 		</div>
@@ -643,7 +642,8 @@ var old_settings_list = [
 	"update_picked",
 	"dlg_setup_format",
 	"dlg_setup_share_sr",
-	"dlg_setup_share_classes"
+	"dlg_setup_share_classes",
+	"dlg_setup_share_options"
 	];
 for ( let i of old_settings_list ) {
 	localStorage.removeItem( i );

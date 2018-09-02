@@ -406,7 +406,7 @@ function update_current_player_stats() {
 
 function update_stats_ok( scope ) {
 	close_dialog("popup_dlg_stats_update_init");
-	clear_stats_update_log();
+	//clear_stats_update_log();
 	
 	// pass date limit to updater
 	var raw_value = Number(document.getElementById("stats_update_limit").value);
@@ -1166,6 +1166,8 @@ function redraw_player( player_struct ) {
 	var player_cell = draw_player_cell( player_struct, false, is_captain );
 	player_item_row.innerHTML = "";
 	player_item_row.appendChild(player_cell);
+	
+	update_teams_sr();
 }
 
 function redraw_teams() {
@@ -1188,7 +1190,7 @@ function redraw_teams() {
 		}
 	}
 
-	//update_teams_sr();
+	update_teams_sr();
 	
 	save_players_list();
 }
@@ -1225,6 +1227,7 @@ function select_html( html_container ) {
 	}
 }
 
-function update_teams_count() {
-	document.getElementById("team_count").innerHTML = teams.length;
+function update_teams_sr() {
+	document.getElementById("team1_sr").innerHTML = calc_team_sr(team1);
+	document.getElementById("team2_sr").innerHTML = calc_team_sr(team2);
 }

@@ -54,6 +54,9 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 						if ( teams[t][p].top_classes[0] != undefined ) {
 							player_str += "\t" + teams[t][p].top_classes[0];
 						}
+						if ( teams[t][p].top_classes[1] != undefined ) {
+							player_str += "/" + teams[t][p].top_classes[1];
+						}
 					}
 					setup_str += player_str + "\n";
 				}
@@ -141,8 +144,9 @@ function export_teams_html( format, include_players, include_sr, include_classes
 					setup_str += "</td>";
 					
 					if ( include_classes ) {
-						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-right: 1px solid gray;'>";
+						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-right: 1px solid gray; white-space: nowrap;'>";
 						if ( p < teams[t].length ) {
+							// main class
 							if ( teams[t][p].top_classes[0] != undefined ) {
 								var class_name = teams[t][p].top_classes[0];
 								if (draw_icons) {
@@ -150,6 +154,19 @@ function export_teams_html( format, include_players, include_sr, include_classes
 								} else {
 									var class_str = class_name;
 									if (class_str == "support") class_str = "sup";
+								}
+								
+								setup_str += class_str;
+							}
+							// secondary class
+							if ( teams[t][p].top_classes[1] != undefined ) {
+								var class_name = teams[t][p].top_classes[1];
+								if (draw_icons) {
+									var class_str = "<img style='height: 15px; width: auto; filter: opacity(40%);' src='"+class_icons_datauri[class_name]+"'/>";
+								} else {
+									var class_str = class_name;
+									if (class_str == "support") class_str = "sup";
+									class_str = "/"+class_str;
 								}
 								
 								setup_str += class_str;
