@@ -427,8 +427,8 @@ function update_stats_ok( scope ) {
 */
 
 function adjust_sr_change() {
-	var adjust_enabled = document.getElementById("roll_adjust_sr").checked;
-	var inputs = document.getElementById("roll_adjust_sr_sub").getElementsByTagName("INPUT");
+	var adjust_enabled = document.getElementById("adjust_sr").checked;
+	var inputs = document.getElementById("adjust_sr_sub").getElementsByTagName("INPUT");
 	for (var i=0; i<inputs.length; i++ ) {
 		inputs[i].disabled = ! adjust_enabled;
 	}
