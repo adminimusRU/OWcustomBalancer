@@ -23,6 +23,43 @@ function add_player_click() {
 	StatsUpdater.addToQueue( player_being_added, 0, true );
 }
 
+function add_test_players() {
+	// fill teams with ramdom players
+	var number_to_add_str = prompt("Enter number of players to generate", 1);
+
+	if (number_to_add_str === null) {
+		return;
+	}
+	var number_to_add = Number(number_to_add_str);
+	if( Number.isNaN(number_to_add) ) {
+		return;
+	}
+	if( ! Number.isInteger(number_to_add) ) {
+		return;
+	}
+	
+	if( (number_to_add > 10000) || (number_to_add == 0) ) {
+		return;
+	}
+
+	var added_players = [];
+	for( var i=1; i<=number_to_add; i++ ) {
+		var new_player = create_random_player(i);
+		if ( find_player_by_id(new_player.id) !== undefined ) {
+			continue;
+		}
+		lobby.push( new_player );
+		added_players.push( new_player.id );
+	}
+
+	save_players_list();
+	redraw_lobby();
+	
+	// highlight all new players and scroll to show last one
+	setTimeout( function() {document.getElementById( added_players[added_players.length-1] ).scrollIntoView(false);}, 100 );
+	setTimeout( function() {highlight_players( added_players );}, 500 );
+}
+
 function apply_settings() {
 	var teams_changed = false;
 	
@@ -1108,7 +1145,7 @@ function highlight_player( player_id ) {
 function highlight_players( player_list ) {
 	for( i=0; i<player_list.length; i++ ) {
 		var player_id = "";
-		if ( typeof player_list[i] == "String" ) {
+		if ( typeof player_list[i] == "string" ) {
 			player_id = player_list[i];
 		} else {
 			player_id = player_list[i].id;
