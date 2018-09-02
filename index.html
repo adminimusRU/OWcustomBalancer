@@ -627,7 +627,6 @@ if ( item_value !== null ) {
 
 // remove deprecated settings in storage from v1
 var old_settings_list = [
-	"team_size",
 	"region",
 	"team1_name",
 	"team2_name",
@@ -669,6 +668,14 @@ if ( saved_settings_json != null ) {
 	}
 }
 apply_stats_updater_settings();
+
+// port team size from v1 storage
+var item_value = localStorage.getItem("team_size");
+if ( item_value !== null ) {
+	Settings.team_size = item_value;
+	localStorage.setItem( storage_prefix+"settings", JSON.stringify(Settings) );
+	localStorage.removeItem( "team_size" );
+}
 
 //restore saved players to teams
 restore_saved_teams();
