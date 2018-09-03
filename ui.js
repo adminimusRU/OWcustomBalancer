@@ -108,6 +108,36 @@ function apply_settings() {
 	}
 }
 
+function balance_teams() {
+	Balancer.team_size = Settings.team_size;
+	Balancer.adjust_sr = Settings.adjust_sr;
+	Balancer.adjust_sr_by_class = {
+			tank: Settings.adjust_tank,
+			dps: Settings.adjust_dps,
+			support: Settings.adjust_support,
+		};
+	Balancer.balance_priority = Settings.balance_priority;
+	Balancer.separate_otps = Settings.separate_otps;
+	
+	Balancer.players = team1.concat( team2 );
+	
+	Balancer.roll_debug = true;
+	Balancer.onDebugMessage = on_balance_debug;
+	
+	Balancer.balanceTeams();
+	
+	team1 = Balancer.team1;
+	team2 = Balancer.team2;
+	
+	if ( Balancer.players.length > 0 ) {
+		lobby = lobby.concat( Balancer.players );
+		redraw_lobby();
+	}
+	
+	save_players_list();
+	redraw_teams();
+}
+
 function clear_lobby() {
 	if( confirm("Permanently delete all players?") ) {
 		lobby.splice( 0, lobby.length );
@@ -727,6 +757,10 @@ function save_team_name( element ) {
 /*
 *		Other events
 */
+
+function on_balance_debug( dbg_msg ) {
+	document.getElementById("debug_log").innerHTML += dbg_msg+"</br>";
+}
 
 function on_player_stats_updated( player_id ) {
 	if ( player_being_added !== undefined ) {
