@@ -40,36 +40,23 @@ var Balancer = {
 		// start at ...00000111110
 		this.player_selection_mask = Array(this.players.length - this.team_size).fill(0).concat( Array(this.team_size).fill(1) );
 		this.player_selection_mask[this.players.length-1] = 0;
-		
-		// dbg
-		//document.getElementById("debug_log").innerHTML += this.player_selection_mask.join('')+"</br>";
-		
 		this.OF_min = Number.MAX_VALUE;
 		
 		// iterate through all possible player combinations and calc objective function
 		while ( this.findNextMask() ) {
-			// dbg
-			//document.getElementById("debug_log").innerHTML += this.player_selection_mask.join('')+"</br>";
-			
 			var picked_players_team1 = this.pickPlayersByMask( this.player_selection_mask );
-			// invert mask for team 2
-			var selection_mask_inv = [];
-			for( let i=0; i<this.player_selection_mask.length; i++ ) {
-				selection_mask_inv.push( (this.player_selection_mask[i]==0 ? 1 : 0) );
-			}
-			var picked_players_team2 = this.pickPlayersByMask( selection_mask_inv );
+			var picked_players_team2 = this.pickPlayersByMask( this.maskInvert(this.player_selection_mask) );
 			
 			// calc objective function
 			var OF_current = this.calcObjectiveFunction( picked_players_team1, picked_players_team2 );
 			
 			if ( OF_current < this.OF_min ) {
 				// remember current roll
-				//this.best_roll = this.player_selection_mask.slice();
 				this.OF_min = OF_current;
 			}
 			
 			// store combination in map
-			var mask_string = this.player_selection_mask.join('');
+			var mask_string = this.maskToString( this.player_selection_mask );
 			this.combinations.set( mask_string, OF_current );
 			
 			if (this.roll_debug) {
@@ -90,23 +77,6 @@ var Balancer = {
 			if ( (OF_value-this.OF_min) <= this.OF_thresold ) {
 				balanced_combinations.push( mask_string );
 			}
-			
-			/*if (this.roll_debug) {
-				if(typeof this.onDebugMessage == "function") {
-					var mask = mask_string.split('');
-					// convert chars to numbers
-					mask.forEach( function(item) {
-						item = Number(item);
-					});
-					var picked_players = this.pickPlayersByMask( mask );
-					var picked_players_string = "{ ";
-					picked_players.forEach( function(item) {
-						picked_players_string += item.id+",";
-					});
-					picked_players_string += " }";
-					this.onDebugMessage.call( undefined, mask_string + " = " + picked_players_string+" = "+OF_value );
-				}
-			}*/
 		}
 		if (this.roll_debug) {
 			if(typeof this.onDebugMessage == "function") {
@@ -122,16 +92,17 @@ var Balancer = {
 				this.onDebugMessage.call( undefined, "selected combination = "+selected_mask_string );
 			}
 		}
-		this.player_selection_mask = selected_mask_string.split('');
-		// convert chars to numbers
-		this.player_selection_mask.forEach( function(item) {
-			item = Number(item);
-		});
+		this.player_selection_mask = this.maskFromString( selected_mask_string );
 		this.team1 = this.pickPlayersByMask( this.player_selection_mask, true );
 		
 		this.team2 = [];
 		for( let i=0; i<this.team_size; i++ ) {
-			this.team2.push( this.players.pop() );
+			let player = this.players.pop();
+			if ( player !== undefined ) {
+				this.team2.push( player );
+			} else {
+				break;
+			}
 		}
 		
 		sort_players( this.team1, 'sr' );
@@ -303,5 +274,25 @@ var Balancer = {
 		}
 		
 		return otp_conflicts_count * 10000;	
+	},
+	
+	maskToString: function( mask ) {
+		return mask.join('');
+	},
+	
+	maskFromString: function( mask_string ) {
+		mask = mask_string.split('');
+		mask.forEach( function(item) {
+			item = Number(item);
+		});
+		return mask;
+	},
+	
+	maskInvert: function( mask ) {
+		var mask_inv = [];
+		for( let i=0; i<mask.length; i++ ) {
+			mask_inv.push( (mask[i]==0 ? 1 : 0) );
+		};
+		return mask_inv;
 	},
 }
