@@ -121,13 +121,13 @@ function balance_teams() {
 	
 	Balancer.players = team1.concat( team2 );
 	
-	Balancer.roll_debug = true;
+	Balancer.roll_debug = false;
 	Balancer.onDebugMessage = on_balance_debug;
 	
 	Balancer.balanceTeams();
 	
-	team1 = Balancer.team1;
-	team2 = Balancer.team2;
+	team1 = Balancer.team1.slice();
+	team2 = Balancer.team2.slice();
 	
 	if ( Balancer.players.length > 0 ) {
 		lobby = lobby.concat( Balancer.players );
@@ -135,6 +135,11 @@ function balance_teams() {
 	}
 	
 	save_players_list();
+	
+	Balancer.team1 = [];
+	Balancer.team2 = [];
+	Balancer.players = [];
+	
 	redraw_teams();
 }
 
