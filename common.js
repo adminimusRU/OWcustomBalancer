@@ -54,15 +54,6 @@ function create_empty_player() {
 		};
 }
 
-/*
-function create_empty_team() {
-	return {
-			name: "",
-			captain_index: -1,
-			players: []
-		};
-}*/
-
 function create_random_player( id ) {
 	var classes = class_names.slice();
 	var top_classes = [];
@@ -74,7 +65,7 @@ function create_random_player( id ) {
 	return {
 			id: "player"+id+"-"+Math.round(Math.random()*99999),
 			display_name: "player "+id,
-			sr: Math.round(Math.random()*5000),
+			sr: Math.round( randn_bm( 1, 4999, 1) ),
 			level: Math.round(Math.random()*2000),
 			empty: false,
 			top_classes: top_classes,
@@ -97,13 +88,7 @@ function find_player_by_id(player_id) {
 			return lobby[i];
 		}
 	}
-	/*for( var t=0; t<teams.length; t++) {
-		for( var i=0; i<teams[t].players.length; i++) {
-			if ( player_id == teams[t].players[i].id) {
-				return teams[t].players[i];
-			}
-		}
-	}*/
+
 	for ( const team of [team1, team2] ) {
 		for( var i=0; i<team.length; i++) {
 			if ( player_id == team[i].id) {
@@ -160,18 +145,6 @@ function get_player_index( player_id, team ) {
 	return -1;
 }
 
-
-/*function get_player_team( player_id ) {
-	for( var t=0; i<teams.length; t++) {
-		for( var i=0; i<teams[t].players.length; i++) {
-			if ( player_id == teams[t].players[i].id) {
-				return team;
-			}
-		}
-	}
-	return undefined;
-}*/
-
 function get_rank_name( sr ) {
 	for ( const rank_name in ow_ranks ) {
 		if ( (sr >= ow_ranks[rank_name].min) && (sr <= ow_ranks[rank_name].max) ) {
@@ -222,6 +195,22 @@ function print_date( date_value ) {
 	} else {
 		return date_value.toLocaleString();
 	}
+}
+
+// random number with normal distribution ("bell curve")
+// using Box–Muller transform
+function randn_bm(min, max, skew=1) {
+	var u = 0, v = 0;
+	while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+	while(v === 0) v = Math.random();
+	let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+
+	num = num / 10.0 + 0.5; // Translate to 0 -> 1
+	if (num > 1 || num < 0) num = randn_bm(min, max, skew); // resample between 0 and 1 if out of range
+	num = Math.pow(num, skew); // Skew
+	num *= max - min; // Stretch to fill range
+	num += min; // offset to min
+	return num;
 }
 
 function round_to( value, precision ) {
