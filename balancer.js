@@ -41,16 +41,10 @@ var Balancer = {
 		this.player_selection_mask = Array(this.players.length - this.team_size).fill(0).concat( Array(this.team_size).fill(1) );
 		this.player_selection_mask[this.players.length-1] = 0;
 		
-		// dbg
-		//document.getElementById("debug_log").innerHTML += this.player_selection_mask.join('')+"</br>";
-		
 		this.OF_min = Number.MAX_VALUE;
 		
 		// iterate through all possible player combinations and calc objective function
 		while ( this.findNextMask() ) {
-			// dbg
-			//document.getElementById("debug_log").innerHTML += this.player_selection_mask.join('')+"</br>";
-			
 			var picked_players_team1 = this.pickPlayersByMask( this.player_selection_mask );
 			// invert mask for team 2
 			var selection_mask_inv = [];
@@ -63,8 +57,6 @@ var Balancer = {
 			var OF_current = this.calcObjectiveFunction( picked_players_team1, picked_players_team2 );
 			
 			if ( OF_current < this.OF_min ) {
-				// remember current roll
-				//this.best_roll = this.player_selection_mask.slice();
 				this.OF_min = OF_current;
 			}
 			
@@ -90,23 +82,6 @@ var Balancer = {
 			if ( (OF_value-this.OF_min) <= this.OF_thresold ) {
 				balanced_combinations.push( mask_string );
 			}
-			
-			/*if (this.roll_debug) {
-				if(typeof this.onDebugMessage == "function") {
-					var mask = mask_string.split('');
-					// convert chars to numbers
-					mask.forEach( function(item) {
-						item = Number(item);
-					});
-					var picked_players = this.pickPlayersByMask( mask );
-					var picked_players_string = "{ ";
-					picked_players.forEach( function(item) {
-						picked_players_string += item.id+",";
-					});
-					picked_players_string += " }";
-					this.onDebugMessage.call( undefined, mask_string + " = " + picked_players_string+" = "+OF_value );
-				}
-			}*/
 		}
 		if (this.roll_debug) {
 			if(typeof this.onDebugMessage == "function") {

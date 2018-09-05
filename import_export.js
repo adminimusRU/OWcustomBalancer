@@ -45,11 +45,7 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 						player_str += teams[t][p].sr + "\t";
 					}
 					player_str += teams[t][p].display_name;
-					/*if ( include_captains ) {
-						if ( teams[t].captain_index == p ) {
-							player_str += " \u265B";
-						}
-					}*/
+
 					if ( include_classes ) {
 						if ( teams[t][p].top_classes[0] != undefined ) {
 							player_str += "\t" + teams[t][p].top_classes[0];
@@ -131,15 +127,6 @@ function export_teams_html( format, include_players, include_sr, include_classes
 					setup_str += "<td style='text-align: left; padding: 0.2em; white-space: nowrap; "+borders+"'>";
 					if ( p < teams[t].length ) {
 						setup_str += escapeHtml( teams[t][p].display_name );
-						if ( include_captains ) {
-							/*if ( teams[t].captain_index == p ) {
-								if (draw_icons) {
-									setup_str += "<span style='color: green;'> \u265B</span>";
-								} else {
-									setup_str += " \u265B";
-								}
-							}*/
-						}
 					}
 					setup_str += "</td>";
 					

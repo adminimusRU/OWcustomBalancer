@@ -121,7 +121,7 @@ function balance_teams() {
 	
 	Balancer.players = team1.concat( team2 );
 	
-	Balancer.roll_debug = true;
+	Balancer.roll_debug = false;
 	Balancer.onDebugMessage = on_balance_debug;
 	
 	Balancer.balanceTeams();
@@ -415,13 +415,7 @@ function sort_lobby( sort_field = 'sr' ) {
 
 
 function sort_team( team, sort_field = 'sr' ) {
-	/*if ( teams[team_index].captain_index !== -1 ) {
-		var captain = teams[team_index].players[teams[team_index].captain_index];
-	}*/
 	sort_players( team, sort_field );
-	/*if ( teams[team_index].captain_index !== -1 ) {
-		teams[team_index].captain_index = teams[team_index].players.indexOf( captain );
-	}*/
 }
 
 function sort_team_click( team_index, sort_field = 'sr' ) {
@@ -473,7 +467,6 @@ function update_current_player_stats() {
 
 function update_stats_ok( scope ) {
 	close_dialog("popup_dlg_stats_update_init");
-	//clear_stats_update_log();
 	
 	// pass date limit to updater
 	var raw_value = Number(document.getElementById("stats_update_limit").value);
@@ -565,13 +558,6 @@ function player_dblClick(ev) {
 	// find index in team for player
 	var selected_index = get_player_index( selected_id, selected_team );
 	var selected_player = selected_team[selected_index];
-	
-	// update captain_index
-	/*if ( selected_team_struct !== undefined ) {
-		if ( selected_team_struct.captain_index == selected_index ) {
-			selected_team_struct.captain_index = -1;
-		}
-	}*/
 	
 	// detect target team
 	var new_team;
@@ -668,28 +654,6 @@ function player_drop(ev) {
 			}
 		}
 	}
-	
-	// update captain_index
-	/*if ( dragged_team_struct !== undefined ) {
-		// captain moved out of team
-		if ( (dragged_team_struct.captain_index == dragged_index) && ( dragged_team !== target_team ) ) {
-			dragged_team_struct.captain_index = -1;
-		}
-		
-		// captain swapped with another player within team
-		if ( dragged_team === target_team ) {
-			if (dragged_team_struct.captain_index == dragged_index) {
-				dragged_team_struct.captain_index = target_index;
-			} else if (dragged_team_struct.captain_index == target_index) {
-				dragged_team_struct.captain_index = dragged_index;
-			}
-		}
-	}
-	if ( target_team_struct !== undefined ) {
-		if ( (target_team_struct.captain_index == target_index) && ( dragged_team !== target_team ) ) {
-			target_team_struct.captain_index = -1;
-		}
-	}*/
 	
 	if (target_id == "") {
 		// dropped on empty slot
@@ -809,9 +773,6 @@ function on_stats_update_complete() {
 	document.getElementById("stats_updater_status").innerHTML = "Update complete";
 	setTimeout( draw_stats_updater_status, StatsUpdater.min_api_request_interval );
 	
-	//document.getElementById("update_all_stats_btn").style.display = "";
-	//document.getElementById("update_active_stats_btn").style.display = "";
-	//document.getElementById("update_stats_stop_btn").style.display = "none";
 	document.getElementById("update_stats_stop_btn").style.visibility = "hidden";
 	document.getElementById("stats_update_progress").style.visibility = "hidden";
 }
@@ -881,13 +842,8 @@ function on_stats_update_progress() {
 }
 
 function on_stats_update_start() {
-	//document.getElementById("update_all_stats_btn").style.display = "none";
-	//document.getElementById("update_active_stats_btn").style.display = "none";
-	//document.getElementById("update_stats_stop_btn").style.display = "";
 	document.getElementById("update_stats_stop_btn").style.visibility = "visible";
-
 	document.getElementById("stats_update_progress").style.visibility = "visible";
-	//clear_stats_update_log();
 	draw_stats_updater_status();
 }
 
@@ -1223,18 +1179,8 @@ function redraw_lobby() {
 }
 
 function redraw_player( player_struct ) {
-	//var is_small = (lobby.indexOf(player_struct) == -1);
-	
-	var is_captain = false;
-	/*var player_team = get_player_team( player_struct.id );
-	if (player_team !== undefined ) {
-		if ( player_team.players[player_team.captain_index] == player_struct ) {
-			is_captain = true;
-		}
-	}*/
-	
 	var player_item_row = document.getElementById( player_struct.id ).parentElement;
-	var player_cell = draw_player_cell( player_struct, false, is_captain );
+	var player_cell = draw_player_cell( player_struct, false, false );
 	player_item_row.innerHTML = "";
 	player_item_row.appendChild(player_cell);
 	
@@ -1242,10 +1188,6 @@ function redraw_player( player_struct ) {
 }
 
 function redraw_teams() {
-	//document.getElementById("team1").innerHTML = "";
-	//document.getElementById("team2").innerHTML = "";
-	//document.getElementById("lobby").innerHTML = "";
-
 	var teams = [team1, team2];
 	for( let t in teams ) {
 		var team_container = document.getElementById("team"+(Number(t)+1));

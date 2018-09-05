@@ -6,7 +6,7 @@ const StatsUpdaterState = {
 
 var StatsUpdater = {
 	queue: [], // players to update
-	current_retry: 2,
+	current_retry: 0,
 	state: StatsUpdaterState.idle,
 	
 	totalQueueLength: 0,
@@ -21,7 +21,6 @@ var StatsUpdater = {
 	update_sr: true,
 	update_class: true,
 	region: "eu",
-	//stats_max_age: 0, // moved to addToQueue parameter
 	
 	// callbacks
 	onPlayerUpdated: undefined,
@@ -249,8 +248,8 @@ var StatsUpdater = {
 	},
 	
 	onOWAPIFail: function ( msg ) {
-		if ( OWAPI.can_retry == true && (this.current_retry <= this.max_retry) ) {
-			// log error and retry
+		if ( OWAPI.can_retry == true && (this.current_retry < this.max_retry) ) {
+			// retry
 			this.current_retry++;
 			setTimeout( this.updateNextPlayer.bind(this), this.min_api_request_interval );
 		} else {

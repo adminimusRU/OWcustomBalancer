@@ -54,15 +54,6 @@ function create_empty_player() {
 		};
 }
 
-/*
-function create_empty_team() {
-	return {
-			name: "",
-			captain_index: -1,
-			players: []
-		};
-}*/
-
 function create_random_player( id ) {
 	var classes = class_names.slice();
 	var top_classes = [];
@@ -97,13 +88,7 @@ function find_player_by_id(player_id) {
 			return lobby[i];
 		}
 	}
-	/*for( var t=0; t<teams.length; t++) {
-		for( var i=0; i<teams[t].players.length; i++) {
-			if ( player_id == teams[t].players[i].id) {
-				return teams[t].players[i];
-			}
-		}
-	}*/
+
 	for ( const team of [team1, team2] ) {
 		for( var i=0; i<team.length; i++) {
 			if ( player_id == team[i].id) {
@@ -159,18 +144,6 @@ function get_player_index( player_id, team ) {
 	
 	return -1;
 }
-
-
-/*function get_player_team( player_id ) {
-	for( var t=0; i<teams.length; t++) {
-		for( var i=0; i<teams[t].players.length; i++) {
-			if ( player_id == teams[t].players[i].id) {
-				return team;
-			}
-		}
-	}
-	return undefined;
-}*/
 
 function get_rank_name( sr ) {
 	for ( const rank_name in ow_ranks ) {
