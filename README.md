@@ -10,7 +10,7 @@ Tool for balancing teams in Overwatch custom games.
     * Tweakable average SR calculation depending on player's main class to reflect different gameplay impact;
     * Separation of similar one-trick ponies;
   * Automatic calculation of team's average SR for manual balancing;
-  * New players added by BattleTag, all stats (current competitive SR, level, most played heroes and roles/classes) are automatically acquired via [OWAPI](https://github.com/SunDwarf/OWAPI);
+  * New players are added by BattleTag, all stats (current competitive SR, level, most played heroes and roles/classes) are automatically acquired via [OWAPI](https://github.com/SunDwarf/OWAPI);
   * Lobby used to store any amount of players (limited only by browser storage size);
   * Player list import and export in JSON and text formats;
   * Team composition export in text, HTML and image formats;
