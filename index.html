@@ -677,11 +677,19 @@ if ( saved_settings_json != null ) {
 	}
 }
 apply_stats_updater_settings();
+// convert team size to number 
+try {
+	Settings.team_size = Number(Settings.team_size);
+} catch(e) {
+	Settings.team_size = 6; // default
+};
 
 // port team size from v1 storage
 var item_value = localStorage.getItem("team_size");
 if ( item_value !== null ) {
-	Settings.team_size = item_value;
+	try {
+		Settings.team_size = Number(item_value);
+	} catch(e) {};
 	localStorage.setItem( storage_prefix+"settings", JSON.stringify(Settings) );
 	localStorage.removeItem( "team_size" );
 }
