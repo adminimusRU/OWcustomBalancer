@@ -213,10 +213,12 @@ var StatsUpdater = {
 		}
 		
 		if( this.update_class ) {
-			// check if class was manually edited and update option checked
-			if ( (player.ce !== true) || this.update_edited_fields ) {
-				player.top_classes = OWAPI.top_classes;
-				player.ce = false;
+			if ( OWAPI.top_classes.length > 0 ) {
+				// check if class was manually edited and update option checked
+				if ( (player.ce !== true) || this.update_edited_fields ) {
+					player.top_classes = OWAPI.top_classes;
+					player.ce = false;
+				}
 			}
 		}
 		
