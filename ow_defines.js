@@ -13,6 +13,7 @@ var hero_classes = {
 	sombra:		"dps",
 	mccree:		"dps",
 	doomfist:	"dps",
+	ashe:		"dps",
 	
 	torbjorn:	"dps",
 	hanzo:		"dps",

@@ -159,6 +159,9 @@ var OWAPI = {
 		var total_hero_playtime = 0;
 		for ( i=0; i<hero_playtime.length; i++ ) {
 			var hero_class = hero_classes[hero_playtime[i].hero];
+			if ( hero_class === undefined ) {
+				throw new Error("Unknown hero: "+hero_playtime[i].hero);
+			}
 			class_playtime[hero_class] += hero_playtime[i].playtime;
 			total_hero_playtime += hero_playtime[i].playtime;
 		}
