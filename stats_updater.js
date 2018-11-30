@@ -189,6 +189,7 @@ var StatsUpdater = {
 	onOWAPISuccess: function() {
 		var player = this.queue.shift();
 		
+		player.private_profile = false;
 		player.level = OWAPI.level;
 	
 		// check if name was manually edited
@@ -250,6 +251,7 @@ var StatsUpdater = {
 	},
 	
 	onOWAPIFail: function ( msg ) {
+		var is_changed = false;
 		if ( OWAPI.can_retry == true && (this.current_retry < this.max_retry) ) {
 			// retry
 			this.current_retry++;
@@ -257,11 +259,16 @@ var StatsUpdater = {
 		} else {
 			// log error and update next player
 			this.update_fails++;
-			this.queue.shift();
+			var player = this.queue.shift();
 			this.current_retry = 0;
 			
+			if ( OWAPI.private_profile ) {
+				player.private_profile = true;
+				is_changed = true;
+			}
+			
 			if(typeof this.onError == "function") {
-				this.onError.call( undefined, OWAPI.id, msg );
+				this.onError.call( undefined, OWAPI.id, msg, is_changed );
 			}
 			
 			if ( this.queue.length > 0 ) {

@@ -12,6 +12,7 @@ var OWAPI = {
 	time_played: 0,
 	top_classes: [],
 	top_heroes: [],
+	private_profile: false,
 	
 	onSuccess: undefined, // Set to actual callback function before use
 	onFail: undefined, // Set to actual callback function before use
@@ -36,6 +37,7 @@ var OWAPI = {
 		this.time_played = 0;
 		this.top_classes = [];
 		this.top_heroes = [];
+		this.private_profile = false;
 		
 		this.id = format_player_id( this.id );
 		this.display_name = format_player_name( this.id );
@@ -90,6 +92,7 @@ var OWAPI = {
 									break;
 						case 403: msg = "Player has private profile";
 									OWAPI.can_retry = false;
+									OWAPI.private_profile = true;
 									break;
 						default: msg = "Can't get player stats (HTTP "+this.status+": "+this.statusText+")";
 									OWAPI.can_retry = true;

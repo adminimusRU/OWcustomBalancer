@@ -2,7 +2,7 @@ function export_lobby( format ) {
 	var export_str = "";
 	if ( format == "json" ) {
 		var export_struct = {
-			format_version: 3,
+			format_version: 4,
 			players: lobby
 			};
 		export_str = JSON.stringify(export_struct, null, ' ');
@@ -190,7 +190,7 @@ function import_lobby( format, import_str ) {
 			var import_struct = JSON.parse(import_str);
 			
 			// check format
-			if ( import_struct.format_version > 3 ) {
+			if ( import_struct.format_version > 4 ) {
 				throw new Error("Unsupported format version");
 			}
 			
@@ -417,6 +417,10 @@ function sanitize_player_struct( player_struct, saved_format ) {
 		player_struct.last_updated = new Date(0);
 	}
 	
+	if ( saved_format <= 3 ) {
+		player_struct.private_profile = false;
+	}
+	
 	if ( saved_format >= 3 ) {
 		// restore dates from strings
 		if ( player_struct.last_updated !== undefined ) {
@@ -435,5 +439,5 @@ function save_players_list() {
 	localStorage.setItem(storage_prefix+"lobby", JSON.stringify(lobby));
 	localStorage.setItem(storage_prefix+"team1", JSON.stringify(team1));
 	localStorage.setItem(storage_prefix+"team2", JSON.stringify(team2));
-	localStorage.setItem(storage_prefix+"saved_format", 3);
+	localStorage.setItem(storage_prefix+"saved_format", 4);
 }

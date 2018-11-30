@@ -782,7 +782,7 @@ function on_stats_update_complete() {
 	document.getElementById("stats_update_progress").style.visibility = "hidden";
 }
 
-function on_stats_update_error( player_id, error_msg ) {
+function on_stats_update_error( player_id, error_msg, is_changed ) {
 	log_stats_update_error( player_id+": "+error_msg );
 	
 	if ( player_being_added !== undefined ) {
@@ -828,7 +828,19 @@ function on_stats_update_error( player_id, error_msg ) {
 			document.getElementById("dlg_update_player_stats_loader").style.display = "none";
 			document.getElementById("dlg_edit_player_update_result").style.display = "";
 			document.getElementById("dlg_edit_player_update_result").innerHTML = escapeHtml( error_msg );
+			
+			if ( is_changed ) { 
+				if ( player_struct.private_profile === true ) {
+					document.getElementById("dlg_player_private_profile").style.display = "inline";
+				} else {
+					document.getElementById("dlg_player_private_profile").style.display = "none";
+				}
+			}
 		}
+	}
+	
+	if ( is_changed ) {
+		save_players_list();
 	}
 }
 
@@ -1054,6 +1066,12 @@ function fill_player_stats_dlg() {
 	
 	document.getElementById("dlg_player_id").href = "https://playoverwatch.com/en-us/career/pc/"+player_struct.id;
 	document.getElementById("dlg_player_id").innerHTML = player_struct.id;
+	
+	if ( player_struct.private_profile === true ) {
+		document.getElementById("dlg_player_private_profile").style.display = "inline";
+	} else {
+		document.getElementById("dlg_player_private_profile").style.display = "none";
+	}
 	
 	document.getElementById("dlg_player_display_name").value = player_struct.display_name;
 	if( player_struct.ne === true )  {
