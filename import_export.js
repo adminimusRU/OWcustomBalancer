@@ -12,7 +12,7 @@ function export_lobby( format ) {
 			export_str += player_id + "\n";
 		}
 	} else if ( format == "csv" ) {
-		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class,Main hero,Last updated\n";
+		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class,Main hero,Last updated,Private profile\n";
 		for( i in lobby) {
 			var player_id = lobby[i].id.trim().replace("-", "#");
 			var main_class = "";
@@ -24,7 +24,7 @@ function export_lobby( format ) {
 			var last_updated = lobby[i].last_updated.toISOString();
 			
 			export_str += player_id+","+lobby[i].display_name+","+lobby[i].sr
-						+","+lobby[i].level+","+main_class+","+secondary_class+","+main_hero+","+last_updated+"\n";
+						+","+lobby[i].level+","+main_class+","+secondary_class+","+main_hero+","+last_updated+","+lobby[i].private_profile+"\n";
 		}
 	}
 	
