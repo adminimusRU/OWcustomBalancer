@@ -30,6 +30,7 @@ var hero_classes = {
 	zenyatta:	"support",
 	moira:		"support",
 	brigitte:	"support",
+	baptiste:	"support",
 	
 	dva:		"tank",
 	orisa:		"tank",
