@@ -139,6 +139,7 @@ var StatsUpdater = {
 			OWAPI.onSuccess = undefined;
 			OWAPI.onFail = undefined;
 			this.queue.splice( 0 );
+			this.totalQueueLength = 0;
 			this.state = StatsUpdaterState.waiting;
 			setTimeout( this.resetState.bind(this), this.min_api_request_interval );
 			if(typeof this.onComplete == "function") {
@@ -191,6 +192,11 @@ var StatsUpdater = {
 		
 		player.private_profile = false;
 		player.level = OWAPI.level;
+		
+		player.playtime_by_class = {};
+		for( let class_name of Object.keys(OWAPI.playtime_by_class) ) {
+			player.playtime_by_class[class_name] = Math.round(OWAPI.playtime_by_class[class_name] * 100) / 100;
+		}
 	
 		// check if name was manually edited
 		if ( (player.ne !== true) || this.update_edited_fields ) {
@@ -198,15 +204,22 @@ var StatsUpdater = {
 		}
 
 		if( this.update_sr ) {
-			if ( OWAPI.sr != 0 ) {
+			if ( (player.se !== true) || this.update_edited_fields ) {
+				player.sr_by_class = {};
+			}
+			if ( Object.keys(OWAPI.sr_by_class).length > 0 ) {
 				// check if SR was manually edited and update option checked
 				if ( (player.se !== true) || this.update_edited_fields ) {
-					player.sr = OWAPI.sr;
+					for( let class_name of class_names ) {
+						if ( OWAPI.sr_by_class[class_name] != undefined ) {
+							player.sr_by_class[class_name] = OWAPI.sr_by_class[class_name];
+						}
+					}
 					player.se = false;
 				}
 			} else {
 				// log error
-				var msg = "Player has 0 SR, not completed placements in current season";
+				var msg = "Player has 0 SR on all classes, not completed placements in current season";
 				if(typeof this.onWarning == "function") {
 					this.onWarning.call( undefined, OWAPI.id, msg );
 				}
@@ -214,10 +227,41 @@ var StatsUpdater = {
 		}
 		
 		if( this.update_class ) {
-			if ( OWAPI.top_classes.length > 0 ) {
+			if ( Object.keys(OWAPI.playtime_by_class).length > 0 ) {
 				// check if class was manually edited and update option checked
 				if ( (player.ce !== true) || this.update_edited_fields ) {
-					player.top_classes = OWAPI.top_classes;
+					// form array of top classes sorted by playtime
+					player.classes = [];
+					var class_found = false;
+					do {
+						var top_playtime = 0;
+						var top_class = "";
+						class_found = false;
+						for( let class_name of Object.keys(OWAPI.playtime_by_class) ) {
+							if ( player.classes.indexOf(class_name) != -1 ) {
+								continue;
+							}
+							// check class SR, only enable class if SR is not 0
+							var class_sr = player.sr_by_class[class_name];
+							if ( class_sr == undefined ) {
+								class_sr = 0;
+							}
+							if ( class_sr == 0 ) {
+								continue;
+							}
+							if ( OWAPI.playtime_by_class[class_name] > top_playtime ) {
+								top_playtime = OWAPI.playtime_by_class[class_name];
+								top_class = class_name;
+							}
+						}
+						if ( top_class != "" ) {
+							class_found = true;
+							
+							
+							player.classes.push( top_class );
+						}
+					} while (class_found)
+					
 					player.ce = false;
 				}
 			}

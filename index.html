@@ -20,8 +20,14 @@
 <script language="JavaScript" type="text/javascript">
 // global variables
 var lobby = [];
+
+// // players in teams (flat array) - for classic balancer
 var team1 = [];
 var team2 = [];
+
+// players in teams by roles - for role locked balancer
+var team1_slots = {};
+var team2_slots = {};
 
 var player_being_added;
 var player_being_edited;
@@ -50,7 +56,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 <body>
 
 <div class="page-title">Overwatch custom game balancer</div>
-<div class="copyright">2017-2018 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Stats data by <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
+<div class="copyright">2017-2019 by <a href="https://github.com/adminimusRU">l33t m3at</a> | Stats data by <a href="https://github.com/SunDwarf/OWAPI">OWAPI</a></div>
 <br/>
 
 <br/>
@@ -113,7 +119,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 		
 		<div class="cell team-cell">
 			<div class="team-toolbar">
-			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1);redraw_teams();" value=" X "/>
+			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team1, team1_slots);redraw_teams();" value=" X "/>
 			<button title="Sort team by class" class="team_btn" onclick="sort_team(team1, 'class');redraw_teams();">
 				&uarr;&darr;
 				<img src="class_icons/dps.png" style="height: 0.9em;">
@@ -134,6 +140,11 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			
 			<br/>
 			<div >
+				<input class="big-checkbox" type="checkbox" id="role_lock_enabled" onchange="role_lock_changed();">
+				<label class="big-label" for="role_lock_enabled"> Enable role lock </label>
+				<br/>
+				<br/>
+				
 				<input class="big-btn" type="button" id="balance_btn" onclick="balance_teams();" value="&#9878; Balance teams" title="Automatically find most balanced compositions"/>
 				<br/>
 				<br/>
@@ -148,12 +159,12 @@ StatsUpdater.onWarning = on_stats_update_warning;
 				<br/>
 				<br/>
 				
-				<div style="display: flex">
-					<button class="medium-btn" style="display:none" onclick="add_test_players();">
-					Add test players</button>
+				<div style="display: flex; visibility: hidden">
+					<button class="medium-btn" onclick="add_test_players();">Add test players</button>
+					
+					<button class="medium-btn" onclick="enable_roll_debug();">Debug</button>
 				
-					<button class="medium-btn" style="display:none" onclick="test();" value=""/>
-					test</button>
+					<button class="medium-btn" onclick="test();" value=""/>test</button>
 				</div>
 				
 			</div>
@@ -168,7 +179,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 		
 		<div class="cell team-cell">
 			<div class="team-toolbar">
-			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2);redraw_teams();" value=" X "/>
+			<input title="Clear team and move all players to lobby" type="button" class="team_btn" onclick="move_team_to_lobby(team2, team2_slots);redraw_teams();" value=" X "/>
 			<button title="Sort team by class" class="team_btn" onclick="sort_team(team2, 'class');redraw_teams();">
 				&uarr;&darr;
 				<img src="class_icons/dps.png" style="height: 0.9em;">
@@ -238,10 +249,16 @@ StatsUpdater.onWarning = on_stats_update_warning;
 					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
 					<li>Player list can be imported and exported with buttons above lobby</li>
-					<li>Balance priority slider:
+					<li>Balance priority slider for classic balancer:
 						<ul>
 							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
 							<li>In intermediate position balancer will account both SR and hero classes in a given proportion</li>
+						</ul> 
+					</li>
+					<li>Balance priority slider for role lock balancer:
+						<ul>
+							<li>Left side: prioritize equal average SR</li>
+							<li>Right side: prioritize players sitting on their main role</li>
 						</ul> 
 					</li>
 					<li>Click 'Balance teams' again to look through best balance variants</li>
@@ -264,7 +281,7 @@ StatsUpdater.onWarning = on_stats_update_warning;
 				<label for="dlg_player_import_format_value">Import format: </label>
 				<select id="dlg_player_import_format_value">
 					<option value="json">JSON (full info)</option>
-					<option value="text">text (btag, [SR, class, offclass])</option>
+					<option value="text">text (btag, [tank SR, DPS SR, support SR, main class])</option>
 				</select>
 			</div>
 						
@@ -385,39 +402,18 @@ StatsUpdater.onWarning = on_stats_update_warning;
 					<div class="cell"><label for="dlg_player_level">Level:</label></div>
 					<div class="cell"><input id="dlg_player_level" type="text" readonly></div>
 				</div>
-				<div class="row">
-					<div class="cell"><label for="dlg_player_sr">SR:</label></div>
-					<div class="cell">
-						<input id="dlg_player_sr" type="number" min=0 max=5000>
-						<span id="dlg_player_sr_edited" class="dlg-edited-mark" title="SR was manually edited" onclick="clear_edited_mark('se');">&#9997;</span>
-					</div>
-				</div>
 			</div>
-			<div id="dlg_class_select" class="dlg_options table">
-				<div class="row">
-					<div class="cell">Main class: </div>
-					<div class="cell">
-						<select id="dlg_main_class">
-							<option value="dps">dps</option>
-							<option value="tank">tank</option>
-							<option value="support">support</option>
-						</select>
-						<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
-					</div>
-				</div>
-				<div class="row">
-					<div class="cell">Secondary class: </div>
-					<div class="cell">
-						<select id="dlg_secondary_class">
-							<option value="">-</option>
-							<option value="dps">dps</option>
-							<option value="tank">tank</option>
-							<option value="support">support</option>
-						</select>
-						<span id="dlg_player_class2_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
-					</div>
-				</div>	
+			
+			<br/>
+			<div class="dlg_options">
+			Classes
+			<span id="dlg_player_class1_edited" class="dlg-edited-mark" title="Classes were manually edited" onclick="clear_edited_mark('ce');">&#9997;</span>
 			</div>
+			
+			<table id="dlg_player_class_table">
+				<!-- class rows here -->
+			</table>
+			
 			<div id="dlg_top_heroes">
 				<br/>
 				<span>Top heroes:</span>
@@ -458,95 +454,153 @@ StatsUpdater.onWarning = on_stats_update_warning;
 			<br/>	
 			
 			<div id="dlg_settings">
-				<div class="group">
-					<div class="group-header">
-						Main
-					</div>
-					<div class="group-content">
-						<div class="table">
-							<div class="row">
-								<div class="cell">
-									Team size &nbsp;
-								</div>
-								<div class="cell">
-									<input id="team_size" name="team_size" type="number" size=3 min=2 max=12 style="width: 3em;" value=""/> players
-								</div>
+				<table>
+				<tr>
+				<td style="vertical-align: top;">
+				
+					<div class="group">
+						<div class="group-header">
+							Common
+						</div>
+						<div class="group-content">
+							<label for="balancer_alg">Balancer algorithm</label>
+							<select id="balancer_alg">
+								<option value="rolelockfallback">role lock preferred, fallback to classic</option>
+								<option value="rolelock">role lock</option>
+								<option value="classic">classic</option>
+							</select>
+							
+							<br/>
+							
+							Team slots
+							</br>
+							<div class="subgroup" id="slots_count_group">
+								<img src="class_icons/tank.png" style="height: 1em;"/>
+								<input id="slots_count_tank" class="percent" type="number" size=3 min=0 max=12 autocomplete="off" value="2"/>
+								&nbsp;
+								
+								<img src="class_icons/dps.png" style="height: 1em;"/>
+								<input id="slots_count_dps" class="percent" type="number" size=3 min=0 max=12 autocomplete="off" value="2"/>
+								&nbsp;
+								
+								<img src="class_icons/support.png" style="height: 1em;"/>
+								<input id="slots_count_support" class="percent" type="number" size=3 min=0 max=12 autocomplete="off" value="2"/>
+								</br>
 							</div>
-						</div>
-					</div>
-				</div>
-				
-				</br>
-				
-				<div class="group">
-					<div class="group-header">
-						Balancer
-					</div>
-					<div class="group-content">
-						<input type="checkbox" id="adjust_sr" onchange="adjust_sr_change();">
-						<label for="adjust_sr">Adjust player SR by main class</label>
-						</br>
-						<div class="subgroup" id="adjust_sr_sub">
-							<img src="class_icons/tank.png" style="height: 1em;"/>
-							<input disabled id="adjust_tank" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="100"/>
-							% &nbsp;
+							<br/>
 							
-							<img src="class_icons/dps.png" style="height: 1em;"/>
-							<input disabled id="adjust_dps" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="120"/>
-							% &nbsp;
+							<input type="checkbox" id="adjust_sr" onchange="adjust_sr_change();">
+							<label for="adjust_sr">Adjust player SR by main class</label>
+							</br>
+							<div class="subgroup" id="adjust_sr_sub">
+								<img src="class_icons/tank.png" style="height: 1em;"/>
+								<input disabled id="adjust_tank" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="100"/>
+								% &nbsp;
+								
+								<img src="class_icons/dps.png" style="height: 1em;"/>
+								<input disabled id="adjust_dps" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="120"/>
+								% &nbsp;
+								
+								<img src="class_icons/support.png" style="height: 1em;"/>
+								<input disabled id="adjust_support" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="80"/>
+								%  </br>
+							</div>
 							
-							<img src="class_icons/support.png" style="height: 1em;"/>
-							<input disabled id="adjust_support" class="percent" type="number" size=3 min=0 max=999 autocomplete="off" value="80"/>
-							%  </br>
+							<input type="checkbox" id="separate_otps">
+							<label for="separate_otps">Do not place similar one-trick ponies into same team</label>
+							</br>						
 						</div>
-						
-						<div class="range-title">Balance priority</div>
-						<input id="balance_priority" type="range" size=3 min=0 max=100 autocomplete="off" value="70" style="width:90%"/>
-						</br>
-						<div class="range-sub-container">
-							<div class="range-sub range-sub-left">equal SR</div>
-							<div class="range-sub range-sub-right">equal classes</div>
+					</div>
+				
+				</td>
+				<td style="vertical-align: top;">
+										
+					<div class="group">
+						<div class="group-header">
+							Stats
 						</div>
+						<div class="group-content">
 						
-						<input type="checkbox" id="separate_otps">
-						<label for="separate_otps">Do not place similar one-trick ponies into same team</label>
-						</br>
+							Region &nbsp;
+							<select id="region">
+								<option value="eu">EU</option>
+								<option value="us">US</option>
+								<option value="kr">KR</option>
+							</select>
+							</br>
 						
+							<input type="checkbox" id="update_sr" checked>
+							<label for="update_sr">Update player SR</label>
+							</br>
+							<input type="checkbox" id="update_class" checked>
+							<label for="update_class">Update player class</label>
+							</br>
+							<input type="checkbox" id="update_edited_fields">
+							<label for="update_edited_fields">Force update manually edited fields (name, SR, class)</label>
+							</br>
+							
+							<input type="checkbox" id="update_picked">
+							<label for="update_picked">Update picked players, if stats older than </label>
+							<input id="update_picked_maxage" name="update_picked_maxage" type="number" size=4 min=0 max=9999 style="width: 4em;" /> days
+							</br>
+						</div>
 					</div>
-				</div>
-				
-				</br>
-				
-				<div class="group">
-					<div class="group-header">
-						Stats
-					</div>
-					<div class="group-content">
 					
-						Region &nbsp;
-						<select id="region">
-							<option value="eu">EU</option>
-							<option value="us">US</option>
-							<option value="kr">KR</option>
-						</select>
-						</br>
+				</td>
+				</tr>
+				<tr>
+				<td style="vertical-align: top;">
 					
-						<input type="checkbox" id="update_sr" checked>
-						<label for="update_sr">Update player SR</label>
-						</br>
-						<input type="checkbox" id="update_class" checked>
-						<label for="update_class">Update player class</label>
-						</br>
-						<input type="checkbox" id="update_edited_fields">
-						<label for="update_edited_fields">Force update manually edited fields (name, SR, class)</label>
-						</br>
-						
-						<input type="checkbox" id="update_picked">
-						<label for="update_picked">Update picked players, if stats older than </label>
-						<input id="update_picked_maxage" name="update_picked_maxage" type="number" size=4 min=0 max=9999 style="width: 4em;" /> days
-						</br>
+					<div class="group">
+						<div class="group-header">
+							Classic balancer options
+						</div>
+						<div class="group-content">
+							<div class="range-title">Balance priority</div>
+							<input id="balance_priority" type="range" size=3 min=0 max=100 autocomplete="off" value="70" style="width:90%"/>
+							</br>
+							<div class="range-sub-container">
+								<div class="range-sub range-sub-left">equal SR</div>
+								<div class="range-sub range-sub-right">equal classes</div>
+							</div>
+							<br/>
+							
+							
+							<label for="sr_calc_method" title="for classic balancer without role lock">SR calculation method</label>
+							<select id="sr_calc_method">
+								<option value="main">by main class</option>
+								<option value="max">maximum of all classes</option>
+								<option value="average">arithmetic average</option>
+								<option value="weighted">time weighted average</option>
+							</select>
+						</div>
 					</div>
-				</div>
+					
+					</br>
+				
+				</td>
+				
+				<td style="vertical-align: top;">
+					<div class="group">
+						<div class="group-header">
+							Role lock balancer options
+						</div>
+						<div class="group-content">
+							<div class="range-title">Balance priority</div>
+							<input id="balance_priority_rolelock" type="range" size=3 min=0 max=100 autocomplete="off" value="70" style="width:90%"/>
+							</br>
+							<div class="range-sub-container">
+								<div class="range-sub range-sub-left">equal SR</div>
+								<div class="range-sub range-sub-right">players on their<br> main classes</div>
+							</div>
+							<br/>
+						</div>
+					</div>
+				
+				</td>
+				</tr>
+				</table>
+					
 				<br/>
 			</div>
 			
@@ -612,6 +666,33 @@ StatsUpdater.onWarning = on_stats_update_warning;
 	</div>
 </div>
 
+<div id="popup_dlg_pending_action" class="dlg" style="display:none">
+	<div class="dlg-background"></div>
+	<div class="dlg-container">
+		<div class="dlg-content" style="min-width: 20em;">
+			<span id="dlg_pending_action_title" class="team-title">Action title</span>
+			
+			<br/>
+			<br/>
+			
+			<div id="popup_dlg_pending_action_loader" class="loader inline-loader"></div>
+			
+			<br/>
+			<br/>
+			
+			<div id="dlg_pending_action_message">
+				Some text
+			</div>
+			
+			<br/>
+			<br/>
+			
+			<div>
+				<input id="popup_dlg_pending_action_ok" class="big-btn" type="button" value="OK" disabled onclick="close_dialog('popup_dlg_pending_action');"/>
+			</div>
+		</div>
+	</div>
+</div>
 
 			
 <div id="debug_log"></div>
@@ -636,8 +717,9 @@ if ( item_value !== null ) {
 	localStorage.removeItem( "saved_players_team2" );
 }
 
-// remove deprecated settings in storage from v1
+// remove deprecated settings in storage
 var old_settings_list = [
+	// from v1
 	"region",
 	"team1_name",
 	"team2_name",
@@ -655,7 +737,7 @@ var old_settings_list = [
 	"dlg_setup_format",
 	"dlg_setup_share_sr",
 	"dlg_setup_share_classes",
-	"dlg_setup_share_options"
+	"dlg_setup_share_options",
 	];
 for ( let i of old_settings_list ) {
 	localStorage.removeItem( i );
@@ -680,22 +762,10 @@ if ( saved_settings_json != null ) {
 	}
 }
 apply_stats_updater_settings();
-// convert team size to number 
-try {
-	Settings.team_size = Number(Settings.team_size);
-} catch(e) {
-	Settings.team_size = 6; // default
-};
 
-// port team size from v1 storage
-var item_value = localStorage.getItem("team_size");
-if ( item_value !== null ) {
-	try {
-		Settings.team_size = Number(item_value);
-	} catch(e) {};
-	localStorage.setItem( storage_prefix+"settings", JSON.stringify(Settings) );
-	localStorage.removeItem( "team_size" );
-}
+// restore role lock option 
+let stored_value = JSON.parse( localStorage.getItem(storage_prefix+"role_lock_enabled") );
+document.getElementById("role_lock_enabled").checked = stored_value;
 
 //restore saved players to teams
 restore_saved_teams();

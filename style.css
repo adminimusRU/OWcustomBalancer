@@ -332,7 +332,7 @@ textarea {
 }
 
 div[id="dlg_settings"] {
-	width: 25em;
+	/*width: 25em;*/
 	text-align: left;
 }
 
@@ -353,6 +353,8 @@ div[id="dlg_roll_progress"] {
 
 .group {
 	border: 1px solid lightgray;
+	min-width: 25em;
+	padding-bottom: 0.5em;
 }
 
 .group-header {
@@ -397,6 +399,13 @@ input[readonly] {
 }
 
 .dlg-edited-mark {
+	visibility: hidden;
+	cursor: pointer;
+	color: blue;
+	font-weight: bold;
+}
+
+.dlg-edited-mark-sr {
 	visibility: hidden;
 	cursor: pointer;
 	color: blue;
@@ -543,4 +552,66 @@ a.action-href:visited {
 	opacity: 1;
 	padding-bottom: 1em;
 	font-size: 120%;
+}
+
+table[id="dlg_player_class_table"] {
+	min-width: 25em;
+	border-collapse: collapse;
+}
+
+table[id="dlg_player_class_table"] tr:first-child {
+	background-color: yellow;
+}
+
+.dlg-player-class-row td {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	border-top: 1px solid gray;
+	border-bottom: 1px solid gray;
+}
+
+.class-disabled {
+	filter: opacity(40%);
+}
+
+.class-icon-dlg {
+	height: 1.2em;
+	vertical-align: text-bottom;
+}
+
+.rank-icon-dlg {
+	height: 1.2em;
+	vertical-align: text-bottom;
+}
+
+.dlg-sr-by-class {
+	width: 4em;
+}
+
+.big-checkbox {
+	transform: scale(1.5);
+}
+
+.big-label {
+	font-size: 13pt;
+}
+
+.class-cell {
+	width: 0.5em;
+}
+
+.class-icon-slot {
+	height: 1.5em;
+	vertical-align: text-bottom;
+}
+
+input[id="balance_priority_rolelock"]::-moz-range-track {
+  background: linear-gradient(to right, #dd3e54, #6be585, #dd3e54);
+}
+input[id="balance_priority_rolelock"]::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #dd3e54, #6be585, #dd3e54);
+}
+
+.dlg-class-enabled-checkbox {
+	transform: scale(1.5);
 }

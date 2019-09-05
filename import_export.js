@@ -1,8 +1,20 @@
+function current_format_version() {
+	return 5;
+	// format version history:
+	// 2: removed 'current_sr', 'max_sr fields'. Offence and defence class merged to dps;
+	// 3: added 'last_updated' field ( stats last updated Date ) [Date];
+	// starting with v4 not compatible with tournament balancer
+	// 4: added 'private_profile' field [Boolean];
+	// 5: remover sr fields, added sr_by_class [struct] and playtime_by_class [struct]; top_classes renamed to classes;
+	//		added optional 'format_type' field to header to distinguish customs and tournament balancer formats
+}
+
 function export_lobby( format ) {
 	var export_str = "";
 	if ( format == "json" ) {
 		var export_struct = {
-			format_version: 4,
+			format_version: current_format_version(),
+			format_type: "customs",
 			players: lobby
 			};
 		export_str = JSON.stringify(export_struct, null, ' ');
@@ -12,19 +24,21 @@ function export_lobby( format ) {
 			export_str += player_id + "\n";
 		}
 	} else if ( format == "csv" ) {
-		export_str += "BattleTag,Name,SR,Level,Main class,Secondary class,Main hero,Last updated,Private profile\n";
+		export_str += "BattleTag,Name,Level,Tank SR,DPS SR,Support SR,Main class,Main hero,Last updated,Private profile\n";
 		for( i in lobby) {
 			var player_id = lobby[i].id.trim().replace("-", "#");
 			var main_class = "";
-			if( lobby[i].top_classes[0] !== undefined ) main_class = lobby[i].top_classes[0];
-			var secondary_class = "";
-			if( lobby[i].top_classes[1] !== undefined ) secondary_class = lobby[i].top_classes[1];
+			if( lobby[i].classes[0] !== undefined ) main_class = lobby[i].classes[0];			
 			var main_hero = "";
 			if( lobby[i].top_heroes[0] !== undefined ) main_hero = lobby[i].top_heroes[0].hero;
 			var last_updated = lobby[i].last_updated.toISOString();
+			var sr_tank = lobby[i].sr_by_class["tank"];
+			var sr_dps = lobby[i].sr_by_class["dps"];
+			var sr_support = lobby[i].sr_by_class["support"];
 			
-			export_str += player_id+","+lobby[i].display_name+","+lobby[i].sr
-						+","+lobby[i].level+","+main_class+","+secondary_class+","+main_hero+","+last_updated+","+lobby[i].private_profile+"\n";
+			export_str += player_id+","+lobby[i].display_name+","+lobby[i].level
+						+","+sr_tank+","+sr_dps+","+sr_support
+						+","+main_class+","+main_hero+","+last_updated+","+lobby[i].private_profile+"\n";
 		}
 	}
 	
@@ -35,28 +49,54 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 	var setup_str = "";
 	
 	if ( format == "text-list" ) {
-		var teams = [team1, team2];
-		for ( var t in teams ) {
-			setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
-			if ( include_players ) {
-				for ( var p in teams[t] ) {
-					var player_str = "";
-					if ( include_sr ) {
-						player_str += teams[t][p].sr + "\t";
-					}
-					player_str += teams[t][p].display_name;
-
-					if ( include_classes ) {
-						if ( teams[t][p].top_classes[0] != undefined ) {
-							player_str += "\t" + teams[t][p].top_classes[0];
+		if ( is_role_lock_enabled() ) {
+			var teams = [team1_slots, team2_slots];	
+			for ( var t in teams ) {
+				setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
+				if ( include_players ) {
+					for( var class_name in teams[t] ) {
+						for ( var player of teams[t][class_name] ) {
+							var player_str = "";
+							
+							player_str += class_name + "\t";
+							
+							if ( include_sr ) {
+								var player_sr = get_player_sr( player, class_name );
+								player_str += player_sr + "\t";
+							}
+							player_str += player.display_name;
+							
+							if ( include_classes ) {
+								player_str += player.classes.join("/");
+							}
+							
+							setup_str += player_str + "\n";
 						}
-						if ( teams[t][p].top_classes[1] != undefined ) {
-							player_str += "/" + teams[t][p].top_classes[1];
-						}
 					}
-					setup_str += player_str + "\n";
 				}
-				setup_str += "\n";
+			}
+			setup_str += "\n";
+		} else {
+			var teams = [team1, team2];
+			for ( var t in teams ) {
+				setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
+				if ( include_players ) {
+					for ( var p in teams[t] ) {
+						var player_str = "";
+						if ( include_sr ) {
+							var player_sr = get_player_sr( teams[t][p], Settings.sr_calc_method );
+							player_str += player_sr + "\t";
+						}
+						player_str += teams[t][p].display_name;
+
+						if ( include_classes ) {
+							player_str += teams[t][p].classes.join("/");
+						}
+							
+						setup_str += player_str + "\n";
+					}
+					setup_str += "\n";
+				}
 			}
 		}
 	} else if ( format == "html-table" ) {
@@ -70,14 +110,20 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 
 function export_teams_html( format, include_players, include_sr, include_classes, include_captains, table_columns, draw_icons ) {
 	var setup_str = "";
-	var teams = [team1, team2];
+	
+	if ( is_role_lock_enabled() ) {
+		var teams = [team1_slots, team2_slots];	
+	} else {
+		var teams = [team1, team2];
+	}
 	
 	var title_colspan = 1;
 	if ( include_players ) {
 		if ( include_sr ) title_colspan++;
 		if ( include_classes ) title_colspan++;
+		if ( is_role_lock_enabled() ) title_colspan++;
 	}
-	var _team_size = Settings.team_size;
+	var _team_size = get_team_size();
 	
 	setup_str += "<table style='border-collapse: collapse; background-color: white;'>\n";
 	
@@ -103,14 +149,48 @@ function export_teams_html( format, include_players, include_sr, include_classes
 				for ( var t = team_offset; t < team_offset+table_columns; t++ ) {
 					if ( t >= teams.length ) break;
 					
+					if ( is_role_lock_enabled() ) {
+						var player = get_player_at_index( teams[t], p );
+						var team_length = get_team_player_count( teams[t] );
+						
+						// print cell with slot class
+						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-left: 1px solid gray; border-right: 1px solid gray; white-space: nowrap;'>";
+						var slot_role = get_player_role(teams[t], player);
+						if (draw_icons) {
+							var class_str = "<img style='filter: opacity(60%);' src='"+class_icons_datauri[slot_role]+"'/>";
+						} else {
+							var class_str = slot_role;
+							if (class_str == "support") class_str = "sup";
+						}
+						setup_str += class_str;
+						setup_str += "</td>";
+					} else {
+						var player = teams[t][p];
+						var team_length = teams[t].length
+					}
+					
 					if ( include_sr ) {
 						setup_str += "<td style='text-align: right; padding-right: 0.5em; border-bottom: 1px solid gray;border-left: 1px solid gray;'>";
-						if ( p < teams[t].length ) {
-							if (draw_icons) {
-								var rank_name = get_rank_name(teams[t][p].sr);
-								setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
-							} else {
-								setup_str += teams[t][p].sr;
+						
+						if ( is_role_lock_enabled() ) {
+							if ( p < team_length ) {
+								var player_sr = get_player_sr( player, get_player_role(teams[t], player) );
+								if (draw_icons) {
+									var rank_name = get_rank_name(player_sr);
+									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
+								} else {
+									setup_str += player_sr;
+								}
+							}
+						} else {
+							if ( p < team_length ) {
+								var player_sr = get_player_sr( player, Settings.sr_calc_method );
+								if (draw_icons) {
+									var rank_name = get_rank_name(player_sr);
+									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
+								} else {
+									setup_str += player_sr;
+								}
 							}
 						}
 						
@@ -125,17 +205,17 @@ function export_teams_html( format, include_players, include_sr, include_classes
 						borders += "border-right: 1px solid gray;";
 					}
 					setup_str += "<td style='text-align: left; padding: 0.2em; white-space: nowrap; "+borders+"'>";
-					if ( p < teams[t].length ) {
-						setup_str += escapeHtml( teams[t][p].display_name );
+					if ( p < team_length ) {
+						setup_str += escapeHtml( player.display_name );
 					}
 					setup_str += "</td>";
 					
 					if ( include_classes ) {
 						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-right: 1px solid gray; white-space: nowrap;'>";
-						if ( p < teams[t].length ) {
+						if ( p < team_length ) {
 							// main class
-							if ( teams[t][p].top_classes[0] != undefined ) {
-								var class_name = teams[t][p].top_classes[0];
+							if ( player.classes[0] != undefined ) {
+								var class_name = player.classes[0];
 								if (draw_icons) {
 									var class_str = "<img style='filter: opacity(60%);' src='"+class_icons_datauri[class_name]+"'/>";
 								} else {
@@ -146,8 +226,8 @@ function export_teams_html( format, include_players, include_sr, include_classes
 								setup_str += class_str;
 							}
 							// secondary class
-							if ( teams[t][p].top_classes[1] != undefined ) {
-								var class_name = teams[t][p].top_classes[1];
+							if ( player.classes[1] != undefined ) {
+								var class_name = player.classes[1];
 								if (draw_icons) {
 									var class_str = "<img style='height: 15px; width: auto; filter: opacity(40%);' src='"+class_icons_datauri[class_name]+"'/>";
 								} else {
@@ -190,8 +270,14 @@ function import_lobby( format, import_str ) {
 			var import_struct = JSON.parse(import_str);
 			
 			// check format
-			if ( import_struct.format_version > 4 ) {
-				throw new Error("Unsupported format version");
+			if ( import_struct.format_version > current_format_version() ) {
+				throw new Error("Unsupported format version: "+import_struct.format_version);
+			}
+			
+			if ( import_struct.format_type !== undefined ) {
+				if( import_struct.format_type != "customs" ) {
+					throw new Error("Unsupported format type: "+import_struct.format_type);
+				}
 			}
 			
 			for( var i=0; i<import_struct.players.length; i++) {
@@ -214,8 +300,8 @@ function import_lobby( format, import_str ) {
 	} else if( format == "text") {
 		try {
 			var battletag_list = import_str.trim().split("\n");
-			for( i in battletag_list ) {
-				// split string to fields (btag, SR, class, offclass)
+			for( i in battletag_list ) {				
+				// split string to fields (btag, tank SR, DPS SR, support SR, main class)
 				var fields = battletag_list[i].split(/[ \t.,;|]+/);
 				
 				// @ToDo check battletag format ?				
@@ -233,23 +319,29 @@ function import_lobby( format, import_str ) {
 				new_player.display_name = player_name;
 				
 				// additional fields
-				if ( fields.length >= 2 ) {
-					new_player.sr = Number( fields[1] );
-					if ( Number.isNaN(new_player.sr) ) {
-						throw new Error("Incorrect SR number "+fields[1]);
+				if ( fields.length >= 4 ) {
+					var index_offset = 1;
+					for ( var class_index in class_names ) {
+						var class_sr_text = fields[Number(class_index)+index_offset];
+						var class_sr = Number(class_sr_text);
+						if ( Number.isNaN(class_sr) ) {
+							throw new Error("Incorrect SR number "+class_sr_text);
+						}
+						if ( class_sr < 0 || class_sr > 5000 ) {
+							throw new Error("Incorrect SR value "+class_sr);
+						}
+						
+						new_player.sr_by_class[ class_names[class_index] ] = class_sr;
 					}
-					if ( new_player.sr < 0 || new_player.sr > 5000 ) {
-						throw new Error("Incorrect SR value "+fields[1]);
-					}
+					
 					new_player.last_updated = new Date;
 				}
-				if ( fields.length >= 3 ) {
-					for ( var c = 2; c < fields.length; c++ ) {
-						if (class_names.indexOf(fields[c]) == -1) {
-							throw new Error("Incorrect class name "+fields[c]);
-						}
-						new_player.top_classes.push( fields[c] );
+				if ( fields.length >= 5 ) {
+					var class_name = fields[4];
+					if (class_names.indexOf(class_name) == -1) {
+						throw new Error("Incorrect class name "+class_name);
 					}
+					new_player.classes.push( class_name);
 				}
 				
 				if ( fields.length == 1 ) {
@@ -383,6 +475,28 @@ function restore_saved_teams() {
 		}
 	}
 	
+	init_team_slots(team1_slots);
+	var saved_players_json = localStorage.getItem( storage_prefix+"team1_slots" );
+	if ( saved_players_json != null ) {
+		var saved_team = JSON.parse(saved_players_json);
+		for ( let class_name in saved_team ) {
+			for ( var i in saved_team[class_name] ) {
+				team1_slots[class_name].push( sanitize_player_struct(saved_team[class_name][i], saved_format) );
+			}
+		}
+	} 
+	
+	init_team_slots(team2_slots);
+	var saved_players_json = localStorage.getItem( storage_prefix+"team2_slots" );
+	if ( saved_players_json != null ) {
+		var saved_team = JSON.parse(saved_players_json);
+		for ( let class_name in saved_team ) {
+			for ( var i in saved_team[class_name] ) {
+				team2_slots[class_name].push( sanitize_player_struct(saved_team[class_name][i], saved_format) );
+			}
+		}
+	}
+	
 	// draw teams
 	redraw_lobby();
 	redraw_teams();
@@ -421,6 +535,21 @@ function sanitize_player_struct( player_struct, saved_format ) {
 		player_struct.private_profile = false;
 	}
 	
+	if ( saved_format <= 4 ) {
+		// convert single SR to new separate rating by roles
+		player_struct.classes = [];		
+		player_struct.sr_by_class = {};
+		player_struct.playtime_by_class = {};
+		for( let class_name of player_struct.top_classes ) {
+			player_struct.classes.push( class_name );
+			player_struct.sr_by_class[class_name] = player_struct.sr;
+			player_struct.playtime_by_class[class_name] = 0;
+		}
+		
+		delete player_struct.top_classes;
+		delete player_struct.sr;
+	}
+	
 	if ( saved_format >= 3 ) {
 		// restore dates from strings
 		if ( player_struct.last_updated !== undefined ) {
@@ -439,5 +568,7 @@ function save_players_list() {
 	localStorage.setItem(storage_prefix+"lobby", JSON.stringify(lobby));
 	localStorage.setItem(storage_prefix+"team1", JSON.stringify(team1));
 	localStorage.setItem(storage_prefix+"team2", JSON.stringify(team2));
-	localStorage.setItem(storage_prefix+"saved_format", 4);
+	localStorage.setItem(storage_prefix+"team1_slots", JSON.stringify(team1_slots));
+	localStorage.setItem(storage_prefix+"team2_slots", JSON.stringify(team2_slots));
+	localStorage.setItem(storage_prefix+"saved_format", current_format_version());
 }

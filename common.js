@@ -29,52 +29,94 @@ function b64EncodeUnicode(str) {
     }));
 }
 
-function calc_team_sr( team ) {
+function calc_team_sr( players_array, players_slots ) {
 	var team_sr = 0;
-	if (team.length > 0) {
-		for( var i=0; i<team.length; i++) {
-			var player_sr = team[i].sr;
+	if ( is_role_lock_enabled() ) {
+		for( let class_name of class_names ) {
+			if ( players_slots[class_name] == undefined ) {
+				continue;
+			}
+			for( var i=0; i<players_slots[class_name].length; i++) {
+				var player_sr = get_player_sr( players_slots[class_name][i], class_name );
+				team_sr += player_sr;
+			}
+		}
+	} else {
+		for( var i=0; i<players_array.length; i++) {
+			var player_sr = get_player_sr( players_array[i], Settings["sr_calc_method"] );
 			team_sr += player_sr;
 		}
-		team_sr = Math.round(team_sr / Settings.team_size);
 	}
+	
+	var team_size = get_team_size();
+	team_sr = Math.round(team_sr / team_size );
+	
 	return team_sr;
 }
 
 function create_empty_player() {
-	return {
+	var new_player = {
 			id: "",
 			display_name: "",
-			sr: 0,
+			sr_by_class: {},
+			playtime_by_class: {},
 			empty: true,
 			level: 0,
-			top_classes: [],
+			classes: [],
 			top_heroes: [],
 			last_updated: new Date(0),
 			private_profile: false,
 		};
+	
+	for( let class_name of class_names ) {
+		new_player.sr_by_class[class_name] = 0;
+		new_player.playtime_by_class[class_name] = 0;
+	}
+	
+	return new_player;
 }
 
 function create_random_player( id ) {
 	var classes = class_names.slice();
 	var top_classes = [];
 	top_classes.push( classes.splice( Math.round(Math.random()*(classes.length-1)), 1 )[0] );
+	
+	// second class
 	if( Math.random() > 0.4 ) {
-		top_classes.push( classes[ Math.round(Math.random()*(classes.length-1)) ] );
+		var new_class = classes[ Math.round(Math.random()*(classes.length-1)) ];
+		if ( top_classes.indexOf(new_class) == -1 ) {
+			top_classes.push( new_class );
+		}
+	}
+	// third class
+	if( Math.random() > 0.8 ) {
+		var new_class = classes[ Math.round(Math.random()*(classes.length-1)) ];
+		if ( top_classes.indexOf(new_class) == -1 ) {
+			top_classes.push( new_class );
+		}
 	}
 	var top_heroes = [];
-	return {
+	var new_player = {
 			id: "player"+id+"-"+Math.round(Math.random()*99999),
 			display_name: "player "+id,
-			sr: Math.round( randn_bm( 1, 4999, 1) ),
+			sr_by_class: {},
+			playtime_by_class: {},
 			level: Math.round(Math.random()*2000),
 			empty: false,
-			top_classes: top_classes,
+			classes: top_classes,
 			top_heroes: top_heroes,
 			last_updated: new Date(0),
 			fake_id: true,
 			private_profile: false
 		};
+
+	// sr by classes
+	for( var i=0; i<top_classes.length; i++) {
+		new_player.sr_by_class[ top_classes[i] ] = Math.round( randn_bm( 1, 4999, 1) );
+		new_player.playtime_by_class[ top_classes[i] ] = Math.round( randn_bm( 1, 30, 1) );
+	}
+		
+	return new_player;
 }
 
 function escapeHtml(html){
@@ -98,6 +140,17 @@ function find_player_by_id(player_id) {
 			}
 		}
 	}
+	
+	for ( let team_slots of [team1_slots, team2_slots] ) {
+		for ( let class_name in team_slots ) {
+			for( var i=0; i<team_slots[class_name].length; i++) {
+				if ( player_id == team_slots[class_name][i].id) {
+					return team_slots[class_name][i];
+				}
+			}
+		}
+	}
+	
 	return undefined;
 }
 
@@ -110,16 +163,24 @@ function format_player_name( id ) {
 }
 
 function get_default_settings() {
-	return {
-		team_size: 6,
-		
+	var def_settings = {
+		//common
+		slots_count: {},		
+		balancer_alg: "rolelockfallback",
 		adjust_sr: false,
 		adjust_dps: 110,
 		adjust_tank: 100,
 		adjust_support: 90,
-		balance_priority: 50,
 		separate_otps: true,
 		
+		// classic balancer
+		balance_priority: 50,
+		sr_calc_method: "main",
+		
+		// role lock balancer
+		balance_priority_rolelock: 50,
+		
+		// stats updating
 		region: "eu",
 		update_class: true,
 		update_sr: true,
@@ -127,6 +188,12 @@ function get_default_settings() {
 		update_picked: true,
 		update_picked_maxage: 15,
 	};
+	
+	for ( let class_name of class_names ) {
+		def_settings.slots_count[class_name] = 2;
+	}
+	
+	return def_settings;
 }
 
 function get_default_export_options() {
@@ -145,6 +212,94 @@ function get_player_index( player_id, team ) {
 	}
 	
 	return -1;
+}
+
+function get_player_at_index( team_slots, player_index ) {
+	var current_index = 0;
+	for( let class_name in team_slots ) {
+		for ( var i=0; i<team_slots[class_name].length; i++ ) {
+			if ( current_index == player_index ) {
+				return team_slots[class_name][i];
+			}
+			current_index++;
+		}
+	}
+	return undefined;
+}
+
+function get_player_role( team_slots, player ) {
+	for ( let class_name in team_slots ) {
+		for( var i=0; i<team_slots[class_name].length; i++) {
+			if ( player.id == team_slots[class_name][i].id) {
+				return class_name;
+			}
+		}
+	}
+}
+
+// Calculate player SR as single number
+// Methods:
+// 		'max' 		- maximum SR of all roles
+//		'main' 		- SR from main role (first in class array)
+//		'average' 	- arithmetic mean of all roles
+//		'weighted' 	- weighted arithmetic mean of all roles. Weights are time played by role
+//		class name 	- SR for specified class
+function get_player_sr( player_struct, method="main" ) {
+	if ( class_names.indexOf(method) != -1 ) {
+		if ( player_struct.sr_by_class[method] !== undefined ) {
+			return player_struct.sr_by_class[method];
+		} else {
+			return 0;
+		}
+	}
+	
+	if ( method == "max" ) {
+		var max_sr = 0;
+		for ( const class_name of player_struct.classes ) {
+			if ( is_undefined( player_struct.sr_by_class[class_name], 0 ) > max_sr ) {
+				max_sr = is_undefined( player_struct.sr_by_class[class_name], 0 );
+			}
+		}
+		return max_sr;
+	} else if ( method == "average" ) {
+		if ( player_struct.classes.length == 0 ) {
+			return 0;
+		}
+		var sr = 0;		
+		for ( const class_name of player_struct.classes ) {
+			sr += is_undefined( player_struct.sr_by_class[class_name], 0 );
+		}
+		return Math.round( sr / player_struct.classes.length );
+	} else if ( method == "weighted" ) {
+		if ( player_struct.classes.length == 0 ) {
+			return 0;
+		}
+		var sr = 0;
+		var total_time = 0;
+		for ( const class_name of player_struct.classes ) {
+			var time = player_struct.playtime_by_class[class_name];
+			if ( time == undefined ) {
+				time = 0;
+			}
+			total_time += time;
+			sr += is_undefined( player_struct.sr_by_class[class_name], 0 ) * time;			
+		}
+		if (total_time == 0 ) {
+			total_time = 1;
+		}
+		return Math.round( sr / total_time );
+	} else { 
+		// default is 'main'
+		if ( player_struct.classes.length == 0 ) {
+			return 0;
+		}
+		var main_class = player_struct.classes[0];
+		if ( player_struct.sr_by_class[main_class] !== undefined ) {
+			return player_struct.sr_by_class[main_class];
+		} else {
+			return 0;
+		}
+	}
 }
 
 function get_rank_name( sr ) {
@@ -181,12 +336,44 @@ function get_scrollbar_width() {
 	return widthNoScroll - widthWithScroll;
 }
 
+function get_team_size() {
+	var team_size = 0;
+	for( let class_name in Settings["slots_count"] ) {
+		for( var i=0; i<Settings["slots_count"][class_name]; i++) {
+			team_size++;
+		}
+	}
+	return team_size;
+}
+
+function get_team_player_count( team_slots ) {
+	var player_count = 0;
+	for( let class_name in team_slots ) {
+		player_count += team_slots[class_name].length;
+	}
+	return player_count;
+}
+
+function init_team_slots( team_struct ) {
+	for ( let prop_name in team_struct ) {
+		delete team_struct[prop_name];
+	}
+	
+	for( let class_name of class_names ) {
+		team_struct[class_name] = [];
+	}
+}
+
 function is_undefined( expr, if_undefined ) {
 	if( typeof expr === "undefined" ) {
 		return if_undefined;
 	} else {
 		return expr;
 	}
+}
+
+function is_role_lock_enabled() {
+	return document.getElementById("role_lock_enabled").checked;
 }
 
 function print_date( date_value ) {
@@ -222,21 +409,25 @@ function round_to( value, precision ) {
 function sort_players( team, sort_field = 'sr' ) {
 	if ( sort_field == 'class' ) {
 		team.sort( function(player1, player2){
-				var val1 = -1;
-				if (player1.top_classes.length > 0) {
-					val1 = 10 * (class_names.indexOf( player1.top_classes[0] )+1);
+				var val1 = 0;
+				for ( var i=0; i<player1.classes.length; i++ ) {
+					var weight = class_names.length - i - 1;
+					val1 += (class_names.indexOf( player1.classes[i] )+1) * Math.pow(10, weight);
 				}
-				if (player1.top_classes.length > 1) {
-					val1 += class_names.indexOf( player1.top_classes[1] ) + 1;
+				
+				var val2 = 0;
+				for ( var i=0; i<player2.classes.length; i++ ) {
+					var weight = class_names.length - i - 1;
+					val2 += (class_names.indexOf( player2.classes[i] )+1) * Math.pow(10, weight);
 				}
-				var val2 = -1;
-				if (player2.top_classes.length > 0) {
-					val2 = 10 * (class_names.indexOf( player2.top_classes[0] )+1);
-				}
-				if (player2.top_classes.length > 1) {
-					val2 += class_names.indexOf( player2.top_classes[1] ) + 1;
-				}
+
 				return val1 - val2;
+			} );
+	} else if ( sort_field == 'sr' ) {
+		team.sort( function(player1, player2){
+				var val1 = get_player_sr( player1, Settings["sr_calc_method"] );
+				var val2 = get_player_sr( player2, Settings["sr_calc_method"] );
+				return val2 - val1;
 			} );
 	} else {
 		team.sort( function(player1, player2){

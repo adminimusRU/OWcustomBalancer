@@ -39,6 +39,7 @@ var hero_classes = {
 	roadhog:	"tank",
 	reinhardt:	"tank",
 	wrecking_ball:"tank",
+	sigma:		"tank",
 };
 
 var ow_ranks = {
