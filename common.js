@@ -154,6 +154,37 @@ function find_player_by_id(player_id) {
 	return undefined;
 }
 
+function find_team_with_free_slot( player ) {
+	// find team with empty slot
+	if ( is_role_lock_enabled() ) {
+		// 1. try to find empty role slot for player classes
+		for ( let class_name of player.classes ) {
+			for ( let team_slots of [team1_slots, team2_slots] ) {
+				if ( team_slots[class_name].length < Settings.slots_count[class_name] ) {
+					return team_slots[class_name];
+				}
+			}
+		}
+		
+		// 2. try any empty role slot
+		for ( let team_slots of [team1_slots, team2_slots] ) {
+			for ( let class_name in team_slots ) {
+				if ( team_slots[class_name].length < Settings.slots_count[class_name] ) {
+					return team_slots[class_name];
+				}
+			}
+		}
+	} else {
+		for( let team of [team1, team2] ) {
+			if ( team.length < get_team_size() ) {
+				return team;
+			}
+		}
+	}
+	
+	return undefined;
+}
+
 function format_player_id( id ) {
 	return id.trim().replace("#", "-");
 }

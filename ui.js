@@ -856,44 +856,8 @@ function player_dblClick(ev) {
 	// detect target team
 	var new_team;
 	if (selected_team == lobby) {
-		// find team with empty slot
-		if ( is_role_lock_enabled() ) {
-			// 1. try to find empty role slot for player classes
-			for ( let class_name of selected_player.classes ) {
-				for ( let team_slots of [team1_slots, team2_slots] ) {
-					if ( team_slots[class_name].length < Settings.slots_count[class_name] ) {
-						new_team = team_slots[class_name];
-						break;
-					}
-				}
-				if ( new_team != undefined ) {
-					break;
-				}
-			}
-			
-			// 2. try any empty role slot
-			if ( new_team === undefined ) {
-				for ( let team_slots of [team1_slots, team2_slots] ) {
-					for ( let class_name in team_slots ) {
-						if ( team_slots[class_name].length < Settings.slots_count[class_name] ) {
-							new_team = team_slots[class_name];
-							break;
-						}
-					}
-					if ( new_team != undefined ) {
-						break;
-					}
-				}
-			}
-			
-		} else {
-			for( let team of [team1, team2] ) {
-				if ( team.length < get_team_size() ) {
-					new_team = team;
-					break;
-				}
-			}
-		}
+		// find team with empty slot		
+		new_team = find_team_with_free_slot( selected_player );
 	} else {
 		new_team = lobby;
 	}
@@ -1084,14 +1048,11 @@ function on_player_stats_updated( player_id ) {
 	if ( player_being_added !== undefined ) {
 		if ( player_id == player_being_added.id ) {
 			// add new player to team with empty slots or lobby
-			var target_team = lobby;
-			// @todo implement with role lock
-			/*for ( let team of [team1, team2] ) {
-				if (team.length < Settings.team_size ) {
-					target_team = team;
-					break;
-				}
-			}*/
+			var target_team = find_team_with_free_slot( player_being_added );
+			if ( target_team == undefined ) {
+				target_team = lobby;
+			}
+
 			target_team.push( player_being_added );
 			save_players_list();
 			redraw_lobby();
@@ -1144,14 +1105,10 @@ function on_stats_update_error( player_id, error_msg, is_changed ) {
 				delete new_player.empty;
 				
 				// add new player to team with empty slots or lobby
-				var target_team = lobby;
-				// @todo implement with role lock
-				/*for ( let team of [team1, team2] ) {
-					if (team.length < Settings.team_size ) {
-						target_team = team;
-						break;
-					}
-				}*/
+				var target_team = find_team_with_free_slot( new_player );
+				if ( target_team == undefined ) {
+					target_team = lobby;
+				}				
 				target_team.push( new_player );
 				save_players_list();
 				redraw_lobby();
