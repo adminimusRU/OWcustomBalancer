@@ -563,6 +563,10 @@ function sanitize_player_struct( player_struct, saved_format ) {
 	return player_struct;
 }
 
+function save_pinned_list() {
+	localStorage.setItem(storage_prefix+"pinned_players", JSON.stringify(Array.from(pinned_players)));
+}
+
 function save_players_list() {
 	// store players to browser local storage
 	localStorage.setItem(storage_prefix+"lobby", JSON.stringify(lobby));

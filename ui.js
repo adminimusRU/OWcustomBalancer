@@ -347,6 +347,14 @@ function edit_player_ok() {
 		}
 	}
 	
+	// pinned mark
+	if ( document.getElementById("dlg_player_pinned").checked ) {
+		pinned_players.add( player_struct.id );
+	} else {
+		pinned_players.delete( player_struct.id );
+	}
+	save_pinned_list();
+	
 	close_dialog("popup_dlg_edit_player");
 	save_players_list();
 	redraw_player( player_struct );
@@ -535,14 +543,25 @@ function lobby_filter_clear() {
 }
 
 function move_team_to_lobby(team, team_slots) {
-	lobby = lobby.concat(team);
+	lobby = lobby.concat( team.filter((player,index,arr)=>{
+		return ! pinned_players.has(player.id)
+	}) );
+	var filtered = team.filter((player,index,arr)=>{
+		return pinned_players.has(player.id)
+	});
 	team.splice( 0, team.length );
+	while ( filtered.length > 0 ) {
+		let removed_player = filtered.pop();
+		team.push( removed_player );
+	}
 	
 	for ( let class_name in team_slots ) {
-		while ( team_slots[class_name].length > 0 ) {
-			let removed_player = team_slots[class_name].pop();
-			lobby.push( removed_player );
-		}
+		lobby = lobby.concat( team_slots[class_name].filter((player,index,arr)=>{
+			return ! pinned_players.has(player.id)
+		}) );
+		team_slots[class_name] = team_slots[class_name].filter((player,index,arr)=>{
+			return pinned_players.has(player.id)
+		});
 	}
 	
 	//update_captains();
@@ -671,6 +690,8 @@ function test() {
 		document.getElementById("debug_log").innerHTML += "<br/>";
 	execTime = performance.now() - start_time;
 	document.getElementById("debug_log").innerHTML += "exec time = "+execTime;*/
+	
+	document.getElementById("debug_log").innerHTML += JSON.stringify( Array.from(pinned_players) ) + "<br/>";
 }
 
 function update_active_stats() {
@@ -922,11 +943,9 @@ function player_drop(ev) {
 	
 	// find team and index in team for both players 
 	var dragged_team;
-	//var dragged_team_struct;
 	var dragged_index;
 	var dragged_player;
 	var target_team;
-	//var target_team_struct;
 	var target_index;
 	var target_player;
 	
@@ -946,13 +965,11 @@ function player_drop(ev) {
 		for( var i=0; i<team.length; i++) {
 			if ( dragged_id == team[i].id) {
 				dragged_team = team;
-				//dragged_team_struct = teams[t];
 				dragged_index = i;
 				dragged_player = team[i];
 			}
 			if ( target_id == team[i].id) {
 				target_team = team;
-				//target_team_struct = teams[t];
 				target_index = i;
 				target_player = team[i];
 			}
@@ -1035,6 +1052,9 @@ function player_drop(ev) {
 	if (drag_action == "remove") {
 		// remove from update queue
 		StatsUpdater.removeFromQueue(dragged_id);
+		// remove from pinned
+		pinned_players.delete(dragged_id);
+		save_pinned_list();
 	}
 	
 	if ((target_team != lobby) && (dragged_team == lobby) && (drag_action != "remove")) {
@@ -1395,6 +1415,15 @@ function draw_player_cell( player_struct, small=false, is_captain=false, slot_cl
 		}
 	}
 	
+	// pinned mark
+	if ( pinned_players.has(player_struct.id) ) {
+		var pinned_icon = document.createElement("img");
+		pinned_icon.className = "pinned-icon";
+		pinned_icon.title = "pinned";		
+		pinned_icon.src = "img/pinned.png";
+		player_name.appendChild(pinned_icon);
+	}
+	
 	return new_player_item;
 }
 
@@ -1436,6 +1465,8 @@ function fill_player_stats_dlg( clear_errors=true ) {
 	}
 	
 	document.getElementById("dlg_player_level").value = player_struct.level;
+	
+	document.getElementById("dlg_player_pinned").checked = pinned_players.has( player_struct.id );
 	
 	// fill class table	
 	document.getElementById("dlg_player_class_table").innerHTML = "";

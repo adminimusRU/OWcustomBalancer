@@ -29,6 +29,9 @@ var team2 = [];
 var team1_slots = {};
 var team2_slots = {};
 
+// id's of pinned players. Those are not moving to lobby when team is cleared
+var pinned_players = new Set();
+
 var player_being_added;
 var player_being_edited;
 var lobby_filter_timer = 0;
@@ -402,6 +405,11 @@ StatsUpdater.onWarning = on_stats_update_warning;
 					<div class="cell"><label for="dlg_player_level">Level:</label></div>
 					<div class="cell"><input id="dlg_player_level" type="text" readonly></div>
 				</div>
+				
+				<div class="row">
+					<div class="cell"><label for="dlg_player_pinned" title="Will not be moved to lobby when team gets cleared">Pinned</label></div>
+					<div class="cell"><input type="checkbox" id="dlg_player_pinned"></div>
+				</div>
 			</div>
 			
 			<br/>
@@ -766,6 +774,13 @@ apply_stats_updater_settings();
 // restore role lock option 
 let stored_value = JSON.parse( localStorage.getItem(storage_prefix+"role_lock_enabled") );
 document.getElementById("role_lock_enabled").checked = stored_value;
+
+// restore pinned list
+let stored_value_json = localStorage.getItem(storage_prefix+"pinned_players");
+if ( stored_value_json != null ) {
+	let pinned_array = JSON.parse(stored_value_json);
+	pinned_players = new Set(pinned_array);
+}
 
 //restore saved players to teams
 restore_saved_teams();
