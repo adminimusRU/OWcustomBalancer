@@ -367,6 +367,10 @@ function get_scrollbar_width() {
 	return widthNoScroll - widthWithScroll;
 }
 
+function get_team_name( team_number ) {
+	return document.getElementById("team"+team_number+"_name").value;
+}
+
 function get_team_size() {
 	var team_size = 0;
 	for( let class_name in Settings["slots_count"] ) {

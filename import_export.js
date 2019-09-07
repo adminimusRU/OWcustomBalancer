@@ -52,7 +52,7 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 		if ( is_role_lock_enabled() ) {
 			var teams = [team1_slots, team2_slots];	
 			for ( var t in teams ) {
-				setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
+				setup_str += get_team_name(Number(t)+1)+ "\n";
 				if ( include_players ) {
 					for( var class_name in teams[t] ) {
 						for ( var player of teams[t][class_name] ) {
@@ -64,7 +64,7 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 								var player_sr = get_player_sr( player, class_name );
 								player_str += player_sr + "\t";
 							}
-							player_str += player.display_name;
+							player_str += player.display_name + "\t";
 							
 							if ( include_classes ) {
 								player_str += player.classes.join("/");
@@ -79,7 +79,7 @@ function export_teams( format, include_players, include_sr, include_classes, inc
 		} else {
 			var teams = [team1, team2];
 			for ( var t in teams ) {
-				setup_str += document.getElementById("team"+(Number(t)+1)+"_name").value + "\n"; // @Todo proper team title
+				setup_str += get_team_name(Number(t)+1) + "\n";
 				if ( include_players ) {
 					for ( var p in teams[t] ) {
 						var player_str = "";
@@ -135,7 +135,7 @@ function export_teams_html( format, include_players, include_sr, include_classes
 			if ( t >= teams.length ) break;
 			setup_str += "<td colspan='"+title_colspan+
 				"' style='text-align: center;background-color: gray; color: white; border: 1px solid gray;'>";
-			setup_str += escapeHtml( document.getElementById("team"+(Number(t)+1)+"_name").value ); // @Todo proper team title
+			setup_str += escapeHtml( get_team_name(Number(t)+1) );
 			setup_str += "</td>";
 			// vertical spacer
 			setup_str += "<td style='width: 1em;'></td>";
@@ -155,14 +155,16 @@ function export_teams_html( format, include_players, include_sr, include_classes
 						
 						// print cell with slot class
 						setup_str += "<td style='text-align: left; border-bottom: 1px solid gray; border-left: 1px solid gray; border-right: 1px solid gray; white-space: nowrap;'>";
-						var slot_role = get_player_role(teams[t], player);
-						if (draw_icons) {
-							var class_str = "<img style='filter: opacity(60%);' src='"+class_icons_datauri[slot_role]+"'/>";
-						} else {
-							var class_str = slot_role;
-							if (class_str == "support") class_str = "sup";
+						if ( p < team_length ) {
+							var slot_role = get_player_role(teams[t], player);
+							if (draw_icons) {
+								var class_str = "<img style='filter: opacity(60%);' src='"+class_icons_datauri[slot_role]+"' alt='"+slot_role+"'/>";
+							} else {
+								var class_str = slot_role;
+								if (class_str == "support") class_str = "sup";
+							}
+							setup_str += class_str;
 						}
-						setup_str += class_str;
 						setup_str += "</td>";
 					} else {
 						var player = teams[t][p];
@@ -177,7 +179,7 @@ function export_teams_html( format, include_players, include_sr, include_classes
 								var player_sr = get_player_sr( player, get_player_role(teams[t], player) );
 								if (draw_icons) {
 									var rank_name = get_rank_name(player_sr);
-									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
+									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"' alt='"+rank_name+"'/>";
 								} else {
 									setup_str += player_sr;
 								}
@@ -187,7 +189,7 @@ function export_teams_html( format, include_players, include_sr, include_classes
 								var player_sr = get_player_sr( player, Settings.sr_calc_method );
 								if (draw_icons) {
 									var rank_name = get_rank_name(player_sr);
-									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"'/>";
+									setup_str += "<img src='"+rank_icons_datauri[rank_name]+"' alt='"+rank_name+"'/>";
 								} else {
 									setup_str += player_sr;
 								}
