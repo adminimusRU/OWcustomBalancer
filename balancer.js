@@ -674,27 +674,32 @@ var Balancer = {
 	},
 	
 	// calculates measure of players sitting on offroles (not playing their main class)
-	// each player with main (first) class mismatching role for current combination = 1 unit	
+	// each player player on slot matching his main (first) role = 0 units
+	// player player on slot matching his second role = 1 units
+	// player player on slot matching his third role = 1.5 units
 	// resulting value is normalized as SR difference
 	// difference for 1 unit equals to 10 SR difference in average SR
 	// 2 units = 40 SR
 	// 5 units = 250 SR	
 	calcClassMismatchRoleLock: function() {
 		var players_on_offclass = 0;
+		
 		for( var i=0; i<this.picked_players_team1.length; i++) {
 			var player_struct = this.picked_players_team1[i];
 			var slot_class = player_struct.classes[ this.class_selection_mask_team1[i] ];
-			var player_main_class = player_struct.classes[0];
-			if ( slot_class != player_main_class ) {
-				players_on_offclass++;
+			if ( player_struct.classes.indexOf(slot_class) == 1 ) {
+				players_on_offclass += 1;
+			} else if ( player_struct.classes.indexOf(slot_class) > 1 ) {
+				players_on_offclass += 1.5;
 			}
 		}
 		for( var i=0; i<this.picked_players_team2.length; i++) {
 			var player_struct = this.picked_players_team2[i];
 			var slot_class = player_struct.classes[ this.class_selection_mask_team2[i] ];
-			var player_main_class = player_struct.classes[0];
-			if ( slot_class != player_main_class ) {
-				players_on_offclass++;
+			if ( player_struct.classes.indexOf(slot_class) == 1 ) {
+				players_on_offclass += 1;
+			} else if ( player_struct.classes.indexOf(slot_class) > 1 ) {
+				players_on_offclass += 1.5;
 			}
 		}
 		
