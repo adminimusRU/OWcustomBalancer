@@ -15,6 +15,9 @@ var team2_slots = {};
 // id's of pinned players. Those are not moving to lobby when team is cleared
 var pinned_players = new Set();
 
+// id's of checked-in players
+var checkin_list = new Set();
+
 // reference to temporary empty player object for new added player for loading stats
 var player_being_added;
 // reference to player object for edit dialog

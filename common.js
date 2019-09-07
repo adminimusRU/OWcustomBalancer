@@ -395,6 +395,14 @@ function init_team_slots( team_struct ) {
 	}
 }
 
+// returns true if val is number or a valid number string
+function is_number_string( val ) {
+	if( typeof val !== "string" ) {
+		return false;
+	}
+	return (+val === +val);
+}
+
 function is_undefined( expr, if_undefined ) {
 	if( typeof expr === "undefined" ) {
 		return if_undefined;

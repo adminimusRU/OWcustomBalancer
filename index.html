@@ -165,6 +165,8 @@
 			<br/>
 			
 			<div >
+				
+			
 				<div style="display: flex">
 					<button class="medium-btn" id="update_active_stats_btn" onclick="update_active_stats();" value="" title="Update stats for active players">&#8635; Update <br/> active players</button>
 				
@@ -191,7 +193,23 @@
 			
 		</div>
 		
-		<div class="cell">
+		<div class="cell" style="width: 5em;">
+		
+		</div>
+		
+		<div class="cell" style="max-width: 25em;">
+			<fieldset style="text-align: center;">
+				<legend>Check-in</legend>
+				
+				<div style="padding-bottom: 0.5em;">
+					<span id="checkin_counter">0</span> checked-in
+				</div>
+				<input class="medium-btn" type="button" onclick="manual_checkin_open();" value="Manual check-in"/>
+				
+				<input class="medium-btn" type="button" onclick="reset_checkin();" value="Reset" title="Clear check-in mark for all players"/>
+			</fieldset>
+			<br/>
+				
 			<div class="tips">
 				<span class="tips-title">
 					<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span>
@@ -201,32 +219,9 @@
 				<ul>
 					<li>Add players by full BattleTag (PlayerName#1234 or PlayerName-1234). BattleTags are case-sensitive</li>
 					<li>Move players with <strong>drag & drop</strong> or <strong>double click</strong></li>
-					<li>Click 'Balance teams' to automatically swap players between teams for best balance</li>
-				</ul>
-				<span class="tips-title">
-					<!--<span style="color: white; text-shadow: 0 0 3px black; font: bold 26pt sans-serif;">?</span> -->
-					<img src="rank_icons/top500_small.png" style="display:inline-block;vertical-align: middle;" height="32">
-					Pro tips</span>
-				<br>
-				<ul>
+					<li>Click 'Balance teams' to automatically swap players between teams for best balance. Click again to get another combination</li>				
 					<li><strong>Right click</strong> on player to edit name, SR and class</li>
-					<li>Team names are editable</li>
 					<li>Player list and all settings are automatically saved in your browser's storage</li>
-					<li>Player list can be imported and exported with buttons above lobby</li>
-					<li>Balance priority slider for classic balancer:
-						<ul>
-							<li>In leftmost position balancer will only account SR (as Blizzard do)</li>
-							<li>In intermediate position balancer will account both SR and hero classes in a given proportion</li>
-						</ul> 
-					</li>
-					<li>Balance priority slider for role lock balancer:
-						<ul>
-							<li>Left side: prioritize equal average SR</li>
-							<li>Right side: prioritize players sitting on their main role</li>
-						</ul> 
-					</li>
-					<li>Click 'Balance teams' again to look through best balance variants</li>
-					<!--<li>Team captains (if enabled) will not be moved by autobalancer</li>-->
 				</ul>
 			</div>
 		</div>
@@ -370,6 +365,11 @@
 				<div class="row">
 					<div class="cell"><label for="dlg_player_pinned" title="Will not be moved to lobby when team gets cleared">Pinned</label></div>
 					<div class="cell"><input type="checkbox" id="dlg_player_pinned"></div>
+				</div>
+				
+				<div class="row">
+					<div class="cell"><label for="dlg_player_checkin">Checked-in</label></div>
+					<div class="cell"><input type="checkbox" id="dlg_player_checkin"></div>
 				</div>
 			</div>
 			
@@ -658,6 +658,38 @@
 			
 			<div>
 				<input id="popup_dlg_pending_action_ok" class="big-btn" type="button" value="OK" disabled onclick="close_dialog('popup_dlg_pending_action');"/>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div id="popup_dlg_manual_checkin" class="dlg" style="display:none">
+	<div class="dlg-background"></div>
+	<div class="dlg-container">
+		<div class="dlg-content">
+			<span class="team-title">Manual check-in</span>
+			<input title="Close" type="button" class="team_btn dlg-close" onclick="close_dialog('popup_dlg_manual_checkin');redraw_lobby();" value="X"/>
+			<br/>
+			<br/>
+									
+			<div style="height: 35em; overflow-y: scroll; min-width: 20em;">
+				<table id="manual_checkin_table" class="manual-checkin-table">
+					<thead>
+						<tr>
+							<th onclick="sort_manual_chekin_table(0);" title="click to sort">&#9745;</th>
+							<th onclick="sort_manual_chekin_table(1);" title="click to sort">Battletag</th>
+						</tr>
+					</thead>
+					<tbody>
+						<!-- checkin list here -->
+					</tbody>
+					<tfoot>
+						<tr>
+							<td title="Total checked-in">0</td>
+							<td title="Total players">0</td>
+						</tr>
+					</tfoot>
+				</table> 
 			</div>
 		</div>
 	</div>

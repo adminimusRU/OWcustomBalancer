@@ -567,6 +567,10 @@ function save_pinned_list() {
 	localStorage.setItem(storage_prefix+"pinned_players", JSON.stringify(Array.from(pinned_players)));
 }
 
+function save_checkin_list() {
+	localStorage.setItem(storage_prefix+"checkin", JSON.stringify(Array.from(checkin_list)));
+}
+
 function save_players_list() {
 	// store players to browser local storage
 	localStorage.setItem(storage_prefix+"lobby", JSON.stringify(lobby));

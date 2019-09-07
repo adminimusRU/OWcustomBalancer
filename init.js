@@ -99,6 +99,13 @@ if ( stored_value != null ) {
 	pinned_players = new Set(pinned_array);
 }
 
+// restore checkin list
+stored_value = localStorage.getItem(storage_prefix+"checkin");
+if ( stored_value != null ) {
+	let checkin_array = JSON.parse(stored_value);
+	checkin_list = new Set(checkin_array);
+}
+
 // restore export options
 var ExportOptions = get_default_export_options();
 stored_value = localStorage.getItem( storage_prefix+"export_options" );

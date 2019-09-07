@@ -241,7 +241,6 @@ div.team-cell:hover > div.team-toolbar {
 	border-radius: 1em;
 	padding: 1em;
 	padding-top: 0.2em;
-	margin-left: 5em;
 	max-width: 25em;
 	min-width: 20em;
 	color: #333333;
@@ -620,4 +619,60 @@ input[id="balance_priority_rolelock"]::-webkit-slider-runnable-track {
 	height: 0.7em;
 	filter: opacity(50%);
 	padding-left: 0.5em;
+}
+
+.manual-checkin-table {
+	border-collapse: collapse;
+	text-align: left;
+	cursor: pointer;
+}
+
+.manual-checkin-table td,th {
+	border: 1px solid gray;
+	padding: 0.2em 1em 0.2em 1em;
+}
+
+.manual-checkin-table th,tfoot td {
+	text-align: center;
+	font-weight: bold;
+	background-color: lightgray;
+}
+
+.manual-checkin-table tr:nth-child(even) {
+	background-color: #f2f2f2;
+}
+
+.manual-checkin-table th {
+	position: sticky;
+	top: 0;
+	min-width: 2em;
+}
+
+.manual-checkin-table tr:hover {
+	background-color: PaleGoldenRod;
+}
+
+.manual-checkin-table tfoot td {
+	position: sticky;
+	bottom: 0;
+}
+
+th.sort-up:after {
+  content: '\2191';
+}
+
+th.sort-down:after {
+  content: '\2193';
+}
+
+.manual-checkin-table tr.checked {
+	background-color: LightGreen;
+}
+
+.player-checkin-mark {
+	color: Green;
+	padding-left: 0.5em;
+	font-size: 90%;
+	font-weight: bold;
+	vertical-align: middle;
 }
