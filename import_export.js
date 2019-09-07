@@ -32,9 +32,9 @@ function export_lobby( format ) {
 			var main_hero = "";
 			if( lobby[i].top_heroes[0] !== undefined ) main_hero = lobby[i].top_heroes[0].hero;
 			var last_updated = lobby[i].last_updated.toISOString();
-			var sr_tank = lobby[i].sr_by_class["tank"];
-			var sr_dps = lobby[i].sr_by_class["dps"];
-			var sr_support = lobby[i].sr_by_class["support"];
+			var sr_tank = is_undefined( lobby[i].sr_by_class["tank"], 0);
+			var sr_dps = is_undefined(lobby[i].sr_by_class["dps"], 0);
+			var sr_support = is_undefined(lobby[i].sr_by_class["support"], 0);
 			
 			export_str += player_id+","+lobby[i].display_name+","+lobby[i].level
 						+","+sr_tank+","+sr_dps+","+sr_support
