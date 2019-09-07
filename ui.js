@@ -515,6 +515,111 @@ function export_teams_dlg_open() {
 	export_teams_dlg_change_format();
 }
 
+function fill_teams() {
+	if ( is_role_lock_enabled() ) {
+		for ( var team_slots of [team1_slots, team2_slots] ) {
+			for ( var class_name in team_slots ) {
+				var free_slots = Settings.slots_count[class_name] - team_slots[class_name].length;
+				var available_players = [];
+				
+				// first pass - pick players by main role for slot
+				for ( var player of lobby ) {
+					if ( checkin_list.size > 0 ) {
+						if ( ! checkin_list.has(player.id) ) {
+							continue;
+						}
+					}
+					if ( player.classes[0] !== class_name ) {
+						continue;
+					}
+					available_players.push( player );
+				}
+				
+				while ( (free_slots > 0) && (available_players.length > 0) ) {
+					var random_index = Math.floor(Math.random() * available_players.length);
+					var random_player = available_players[ random_index ];
+					lobby.splice( lobby.indexOf(random_player), 1 );
+					available_players.splice( available_players.indexOf(random_player), 1 );
+					team_slots[class_name].push( random_player );
+					free_slots--;
+				}
+				if ( free_slots <= 0 ) {
+					continue;
+				}
+				
+				// second pass - pick players able to play specified role
+				for ( var player of lobby ) {
+					if ( checkin_list.size > 0 ) {
+						if ( ! checkin_list.has(player.id) ) {
+							continue;
+						}
+					}
+					if ( player.classes.indexOf(class_name) == -1 ) {
+						continue;
+					}
+					available_players.push( player );
+				}
+				while ( (free_slots > 0) && (available_players.length > 0) ) {
+					var random_index = Math.floor(Math.random() * available_players.length);
+					var random_player = available_players[ random_index ];
+					lobby.splice( lobby.indexOf(random_player), 1 );
+					available_players.splice( available_players.indexOf(random_player), 1 );
+					team_slots[class_name].push( random_player );
+					free_slots--;
+				}
+				if ( free_slots <= 0 ) {
+					continue;
+				}
+				
+				// third pass - pick any available players
+				for ( var player of lobby ) {
+					if ( checkin_list.size > 0 ) {
+						if ( ! checkin_list.has(player.id) ) {
+							continue;
+						}
+					}
+					available_players.push( player );
+				}
+				while ( (free_slots > 0) && (available_players.length > 0) ) {
+					var random_index = Math.floor(Math.random() * available_players.length);
+					var random_player = available_players[ random_index ];
+					lobby.splice( lobby.indexOf(random_player), 1 );
+					available_players.splice( available_players.indexOf(random_player), 1 );
+					team_slots[class_name].push( random_player );
+					free_slots--;
+				}
+			}
+		}
+	} else {
+		for ( var team of [team1, team2] ) {
+			var free_slots = get_team_size() - team.length;
+			var available_players = [];
+			for ( var player of lobby ) {
+				if ( checkin_list.size > 0 ) {
+					if ( checkin_list.has(player.id) ) {
+						available_players.push( player );
+					}
+				} else {
+					available_players.push( player );
+				}
+			}
+			
+			while ( (free_slots > 0) && (available_players.length > 0) ) {
+				var random_index = Math.floor(Math.random() * available_players.length);
+				var random_player = available_players[ random_index ];
+				lobby.splice( lobby.indexOf(random_player), 1 );
+				available_players.splice( available_players.indexOf(random_player), 1 );
+				team.push( random_player );
+				free_slots--;
+			}
+		}
+	}
+	
+	save_players_list();
+	redraw_lobby();
+	redraw_teams();
+}
+
 function generate_random_players() {
 	var number_to_add_str = prompt("Enter number of players to generate", 1);
 
