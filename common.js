@@ -445,7 +445,12 @@ function round_to( value, precision ) {
 	return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
 }
 
-function sort_players( team, sort_field = 'sr' ) {
+function sort_players( team, sort_field = 'sr', order_asc=false ) {
+	var order = 1;
+	if (order_asc) {
+		order = -1;
+	}
+	
 	if ( sort_field == 'class' ) {
 		team.sort( function(player1, player2){
 				var val1 = 0;
@@ -460,22 +465,28 @@ function sort_players( team, sort_field = 'sr' ) {
 					val2 += (class_names.indexOf( player2.classes[i] )+1) * Math.pow(10, weight);
 				}
 
-				return val1 - val2;
+				return order * (val1 - val2);
 			} );
 	} else if ( sort_field == 'sr' ) {
 		team.sort( function(player1, player2){
 				var val1 = get_player_sr( player1, Settings["sr_calc_method"] );
 				var val2 = get_player_sr( player2, Settings["sr_calc_method"] );
-				return val2 - val1;
+				return order *(val2 - val1);
+			} );
+	} else if ( sort_field == 'checkin' ) {
+		team.sort( function(player1, player2){
+				var val1 = checkin_list.has(player1.id) ;
+				var val2 = checkin_list.has(player2.id) ;
+				return order * (val2 - val1);
 			} );
 	} else {
 		team.sort( function(player1, player2){
 				if( typeof player1[sort_field] === 'string') {
 					var val1 = player1[sort_field].toLowerCase();
 					var val2 = player2[sort_field].toLowerCase();
-					return ( val1<val2 ? -1 : (val1>val2?1:0) );
+					return order * ( val1<val2 ? -1 : (val1>val2?1:0) );
 				} else { 
-					return player2[sort_field] - player1[sort_field];
+					return order * (player2[sort_field] - player1[sort_field]);
 				} 
 			} );
 	}

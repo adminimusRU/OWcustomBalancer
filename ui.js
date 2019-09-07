@@ -836,8 +836,23 @@ function settings_dlg_open() {
 	open_dialog( "popup_dlg_settings" );
 }
 
-function sort_lobby( sort_field = 'sr' ) {
-	sort_players(lobby, sort_field);
+function shuffle_lobby() {
+	lobby = array_shuffle( lobby );
+	save_players_list();
+	redraw_lobby();
+}
+
+function sort_lobby( sort_field = 'sr', button_element=undefined ) {
+	var order_inverse = false;
+	if (button_element !== undefined) {
+		if (button_element.hasAttribute("order_inverse")) {
+			order_inverse = true;
+			button_element.removeAttribute("order_inverse");
+		} else {
+			button_element.setAttribute("order_inverse", "");
+		}
+	}
+	sort_players(lobby, sort_field, order_inverse);
 	save_players_list();
 	redraw_lobby();
 }

@@ -621,6 +621,10 @@ input[id="balance_priority_rolelock"]::-webkit-slider-runnable-track {
 	padding-left: 0.5em;
 }
 
+/* 
+	manual check-in dialog
+*/
+
 .manual-checkin-table {
 	border-collapse: collapse;
 	text-align: left;
@@ -676,3 +680,41 @@ th.sort-down:after {
 	font-weight: bold;
 	vertical-align: middle;
 }
+
+/* 
+	dropdown menu in toolbars 
+*/
+
+.dropbtn {
+	float: none;
+}
+
+.dropdown {
+	position: relative;
+	display: inline-block;
+}
+
+.dropdown-content {
+	display: none;
+	position: absolute;
+	background-color: ButtonFace;
+	color: ButtonText;
+	min-width: 8em;
+	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+	z-index: 1;
+}
+
+.dropdown-content div {
+	padding: 0.2em;
+	text-decoration: none;
+	display: block;
+	font-size: 80%;
+	cursor: default;
+}
+
+.dropdown-content div:hover {
+	color: HighlightText;
+	background-color: Highlight;
+}
+
+.dropdown:hover .dropdown-content {display: block;}

@@ -40,15 +40,21 @@
 			<!-- lobby -->
 			
 			<div class="team-toolbar">
-			<input title="Clear lobby" type="button" class="team_btn" onclick="clear_lobby();" value=" X "/>
-			<input title="Import lobby" id="import_lobby_btn" type="button" class="team_btn" onclick="import_lobby_dlg_open();" value="Import"/>
-			<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby_dlg_open();" value="Export"/>
-			<button title="Sort lobby by class" class="team_btn" onclick="sort_lobby('class');">
-				&uarr;&darr;
-				<img src="class_icons/dps.png" style="height: 0.9em;">
-			</button>
-			<input title="Sort lobby by name" type="button" class="team_btn" onclick="sort_lobby('display_name');" value="&uarr;&darr;Az"/>
-			<input title="Sort lobby by SR" type="button" class="team_btn" onclick="sort_lobby('sr');" value="&uarr;&darr;123"/>
+				<input title="Clear lobby" type="button" class="team_btn" onclick="clear_lobby();" value=" X "/>
+				<input title="Import lobby" id="import_lobby_btn" type="button" class="team_btn" onclick="import_lobby_dlg_open();" value="Import"/>
+				<input title="Export lobby" type="button" class="team_btn" onclick="export_lobby_dlg_open();" value="Export"/>
+				
+				<div class="dropdown" style="float:right;">
+					<button class="team_btn dropbtn">&uarr;&darr; Sort &#x25BC;</button>
+					<div class="dropdown-content">
+						<div onclick="sort_lobby('display_name', this);">by name</div>
+						<div onclick="sort_lobby('sr', this);">by SR</div>
+						<div onclick="sort_lobby('class', this);">by class</div>
+						<div onclick="sort_lobby('level', this);">by level</div>
+						<div onclick="sort_lobby('checkin', this);">by check-in</div>						
+						<div onclick="shuffle_lobby();">shuffle</div>
+					</div>
+				</div>
 			</div>
 			
 			<div>
