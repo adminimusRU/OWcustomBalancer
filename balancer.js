@@ -30,6 +30,7 @@ var Balancer = {
 	adjust_sr_by_class: {},
 	// combinations with objective function value within range of [OF_min...OF_min+OF_thresold] are considered as balanced
 	OF_thresold: 10,
+	// if debug messages enabled through onDebugMessage callcack
 	roll_debug: false,
 	// 0 - minimum dbg messages
 	// 1 - show details for best found combintation
@@ -79,6 +80,12 @@ var Balancer = {
 	// value = objective function value
 	combinations: new Map(),
 	
+	// array of best found balance variants
+	balanced_combinations: [],
+	
+	// string with all balancer input data (setting and players) from previuos run
+	old_state: "",
+	
 	dbg_class_combinations: 0,
 	dbg_printed_lines: 0,
 	
@@ -87,6 +94,8 @@ var Balancer = {
 	// public methods
 	
 	balanceTeams: function() {
+		var start_time = performance.now();
+		
 		// calc total team size
 		this.team_size = 0;
 		for( let class_name in this.slots_count ) {
@@ -104,30 +113,52 @@ var Balancer = {
 			return;
 		}
 		
-		// balance magic
-		var start_time = performance.now();
-		if ( this.algorithm == "classic" ) {
-			this.debugMsg( "using classic alg" );
-			this.is_successfull = this.balanceTeamsClassic();
-			this.is_rolelock = false;
-		} else if ( this.algorithm == "rolelock" ) {
-			this.debugMsg( "using rolelock alg" );
-			this.is_successfull = this.balanceTeamsRoleLock();
-			this.is_rolelock = true;
-		} else if ( this.algorithm == "rolelockfallback" ) {
-			this.debugMsg( "using rolelockfallback alg" );
-			this.is_successfull = this.balanceTeamsRoleLock();
-			if ( this.is_successfull ) {
-				this.is_rolelock = true;
+		// sort players by id
+		// otherwise combinations cache will be invalid
+		this.players.sort( function(player1, player2){				
+				return ( player1.id<player2.id ? -1 : (player1.id>player2.id?1:0) )
+			} );
+			
+		// check if all input data is identical to previous run
+		this.debugMsg( "old state: "+this.old_state, 1 );
+		var new_state = this.getBalancerStateString();
+		this.debugMsg( "new state: "+new_state, 1 );
+		
+		if ( new_state == this.old_state ) {
+			this.debugMsg( "input data not changed, returning another variant from cache" );
+			if ( this.is_rolelock ) {
+				this.is_successfull = this.buildRandomBalanceVariantRolelock();
 			} else {
-				this.debugMsg( "balance not possible with role lock, fallback to classic" );
+				this.is_successfull = this.buildRandomBalanceVariantClassic();
+			}
+		} else {
+			this.debugMsg( "input data changed, calculating new balance" );
+			this.old_state = new_state;
+			
+			// balance magic			
+			if ( this.algorithm == "classic" ) {
+				this.debugMsg( "using classic alg" );
 				this.is_successfull = this.balanceTeamsClassic();
 				this.is_rolelock = false;
-			}			
-		} else {
-			this.debugMsg( "unknown alg"+this.algorithm );
-			this.is_successfull = false;
-			this.is_rolelock = false;
+			} else if ( this.algorithm == "rolelock" ) {
+				this.debugMsg( "using rolelock alg" );
+				this.is_successfull = this.balanceTeamsRoleLock();
+				this.is_rolelock = true;
+			} else if ( this.algorithm == "rolelockfallback" ) {
+				this.debugMsg( "using rolelockfallback alg" );
+				this.is_successfull = this.balanceTeamsRoleLock();
+				if ( this.is_successfull ) {
+					this.is_rolelock = true;
+				} else {
+					this.debugMsg( "balance not possible with role lock, fallback to classic" );
+					this.is_successfull = this.balanceTeamsClassic();
+					this.is_rolelock = false;
+				}			
+			} else {
+				this.debugMsg( "unknown alg"+this.algorithm );
+				this.is_successfull = false;
+				this.is_rolelock = false;
+			}
 		}
 		
 		var execTime = performance.now() - start_time;
@@ -141,7 +172,7 @@ var Balancer = {
 		// init
 		this.initPlayerMask();		
 		this.OF_min = Number.MAX_VALUE;
-		this.combinations = new Map();
+		this.combinations.clear();
 		this.dbg_printed_lines = 0;
 		
 		// iterate through all possible player combinations and calc objective function (OF)
@@ -173,28 +204,36 @@ var Balancer = {
 		this.debugMsg( "best OF = "+this.OF_min );
 		this.debugMsg( "stored combinations count = "+this.combinations.size );
 		this.debugMsg( "best combinations:" );
-		var balanced_combinations = [];
+		this.balanced_combinations = [];
 		for (var [mask_string, OF_value] of this.combinations) {
 			if ( (OF_value-this.OF_min) <= this.OF_thresold ) {
-				balanced_combinations.push( mask_string );
+				this.balanced_combinations.push( mask_string );
 				
 				if ( (this.debug_level>=1) && (this.dbg_printed_lines<500) ) {
 					this.dbg_printed_lines++;
-					this.debugMsg( "#"+(balanced_combinations.length-1)+" = "+mask_string, 1 );
+					this.debugMsg( "#"+(this.balanced_combinations.length-1)+" = "+mask_string, 1 );
 					this.dbgPrintCombinationInfoClassic( mask_string );
 				}
 			}
 		}
-		this.debugMsg( "best combinations count = "+balanced_combinations.length );
 		
-		if ( balanced_combinations.length == 0 ) {
+		// clean up bad variants
+		this.combinations.clear();
+		
+		return this.buildRandomBalanceVariantClassic();
+	},
+	
+	buildRandomBalanceVariantClassic: function() {
+		this.debugMsg( "best combinations count = "+this.balanced_combinations.length );
+		
+		if ( this.balanced_combinations.length == 0 ) {
 			// no possible balance found
 			return false;
 		}
 		
 		// pick random one of best found combinations
-		var selected_mask_index = Math.floor(Math.random() * (balanced_combinations.length));
-		var selected_mask_string = balanced_combinations[ selected_mask_index ];		
+		var selected_mask_index = Math.floor(Math.random() * (this.balanced_combinations.length));
+		var selected_mask_string = this.balanced_combinations[ selected_mask_index ];		
 		this.player_selection_mask = this.maskFromString( selected_mask_string );
 		this.debugMsg( "selected combination #"+selected_mask_index+" = "+selected_mask_string );
 		this.dbgPrintCombinationInfoClassic( selected_mask_string );
@@ -225,7 +264,7 @@ var Balancer = {
 		// init
 		this.initPlayerMask();		
 		this.OF_min = Number.MAX_VALUE;
-		this.combinations = new Map();
+		this.combinations.clear();
 		var players_combinations = 0;
 		var class_combinations_total = 0;
 		var class_combinations_valid = 0;
@@ -293,30 +332,37 @@ var Balancer = {
 		
 		// filter balanced combinations within OF thresold around minimum
 		this.debugMsg( "best combinations:", 1 );		
-		var balanced_combinations = [];
+		this.balanced_combinations = [];
 		for (var [mask_string, OF_value] of this.combinations) {
 			if ( (OF_value-this.OF_min) <= this.OF_thresold ) {
-				balanced_combinations.push( mask_string );
+				this.balanced_combinations.push( mask_string );
 				
 				// dbg info
 				if ( (this.debug_level>=1) && (this.dbg_printed_lines<500) ) {
 					this.dbg_printed_lines++;
-					this.debugMsg( "#"+(balanced_combinations.length-1)+" = "+mask_string, 1 );
+					this.debugMsg( "#"+(this.balanced_combinations.length-1)+" = "+mask_string, 1 );
 					this.dbgPrintCombinationInfoRoleLock( mask_string );
 				}
 			}
 		}
-		this.debugMsg( "best combinations count = "+balanced_combinations.length );
+		// clean up bad variants
+		this.combinations.clear();
 		
-		if ( balanced_combinations.length == 0 ) {
+		return this.buildRandomBalanceVariantRolelock();
+	},
+	
+	
+	buildRandomBalanceVariantRolelock: function() {
+		this.debugMsg( "best combinations count = "+this.balanced_combinations.length );		
+		
+		if ( this.balanced_combinations.length == 0 ) {
 			// no possible balance found
 			return false;
 		}
 		
-		// pick random one of best found combinations
-		balance_found = true;
-		var selected_mask_index = Math.floor(Math.random() * (balanced_combinations.length));
-		var selected_mask_string = balanced_combinations[ selected_mask_index ];
+		// pick random one of best found combinations		
+		var selected_mask_index = Math.floor(Math.random() * (this.balanced_combinations.length));
+		var selected_mask_string = this.balanced_combinations[ selected_mask_index ];
 		this.debugMsg( "selected combination #"+selected_mask_index+" = "+selected_mask_string );
 		this.dbgPrintCombinationInfoRoleLock( selected_mask_string );		
 		
@@ -736,6 +782,40 @@ var Balancer = {
 		return slots;
 	},
 	
+	
+	// build string representing all balancer settings and players
+	getBalancerStateString: function() {
+		// create temporary object with all data affecting balance calculation
+		// and copy data from this
+		var tmp_obj = {};
+		
+		// list of properies affecting balance calculations
+		var balance_properties = [			
+			"slots_count",
+			"algorithm",
+			"separate_otps",
+			"adjust_sr",
+			"adjust_sr_by_class",
+			"OF_thresold",
+			"classic_sr_calc_method",
+			"balance_priority_classic",
+			"balance_priority_rolelock",
+			"balance_max_sr_diff",
+		];
+		for ( let property_name of balance_properties ) {
+			tmp_obj[property_name] = this[property_name];
+		}
+		
+		// copy players
+		tmp_obj.players = [];
+		for (let player of this.players) {
+			tmp_obj.players.push( player );
+		}		
+			
+		// convert obj to string
+		var data_string = JSON.stringify(tmp_obj, null, null);
+		return data_string;
+	},
 	
 	// debug functions
 	
