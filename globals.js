@@ -35,3 +35,6 @@ var ExportOptions = {};
 // class icons in data:url strings
 var class_icons_datauri = {};
 var rank_icons_datauri = {};
+
+// worker for executing balancer in dedicated thread
+var BalanceWorker = undefined;

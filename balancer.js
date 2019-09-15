@@ -1,16 +1,23 @@
+/*
+*		Team balancer
+*/
+
 var Balancer = {
+	// input properties
 	players: [], 			// put active players here
 	
+	// output properties
 	team1: [], 				// output team 1 (without role lock)
 	team2: [], 				// output team 2 (without role lock)
 	team1_slots: {},		// output team 1 by classes (with role lock)
 	team2_slots: {},		// output team 2 by classes (with role lock)
-	is_rolelock: false, 	// if true, output teams are team1_slots and team2_slots
 	is_successfull: false,	// indicates if any balanced combinations found
+	is_rolelock: false, 	// if true, output teams are team1_slots and team2_slots
 	
 	
 	// callbacks
 	onDebugMessage: undefined,
+	onProgressChange: undefined,
 	
 	
 	// common settings	
@@ -103,11 +110,15 @@ var Balancer = {
 		}
 		this.debugMsg( "team size="+this.team_size );
 		
+		// init output properties
+		this.team1 = [];
+		this.team2 = [];
+		init_team_slots( this.team1_slots );
+		init_team_slots( this.team2_slots );
+		
 		// check if we have enough players
 		if ( this.players.length < this.team_size ) {
 			this.debugMsg( "not enough players" );
-			this.team1 = this.players;
-			this.players = [];
 			this.is_successfull = false;
 			this.is_rolelock = false;
 			return;
@@ -251,10 +262,6 @@ var Balancer = {
 			}
 		}
 		
-		// @todo sort in UI module after balance, make setting for default sorting field
-		sort_players( this.team1, 'sr' );
-		sort_players( this.team2, 'sr' );
-		
 		return true;
 	},
 	
@@ -270,11 +277,23 @@ var Balancer = {
 		var class_combinations_valid = 0;
 		this.dbg_printed_lines = 0;
 		
+		var target_players_combinations = factorial(this.team_size*2) / ( factorial(this.team_size) * factorial(this.team_size) );
+		this.debugMsg( "target_players_combinations = "+target_players_combinations );
+		var previous_progress = 0;
+		
 		// iterate through all possible player and class combinations and calc objective function (OF)
 		// best balanced combinations are with minimum OF value, 0 = perfect
 		
 		// player combinations loop
 		while ( this.findNextPlayerMask() ) {
+			if(typeof this.onProgressChange == "function") {
+				var current_progress = Math.round( (players_combinations / target_players_combinations)*100 );
+				if ( current_progress > previous_progress ) {
+					this.onProgressChange.call( undefined, current_progress );
+					previous_progress = current_progress;
+				}
+			}
+			
 			players_combinations++;
 			this.picked_players_team1 = this.pickPlayersByMask( this.player_selection_mask );
 			this.picked_players_team2 = this.pickPlayersByMask( this.maskInvert(this.player_selection_mask) );

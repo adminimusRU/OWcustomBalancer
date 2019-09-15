@@ -15,7 +15,6 @@
 <script src="stats_updater.js"></script>
 <script src="import_export.js"></script>
 <script src="ui.js"></script>
-<script src="balancer.js"></script>
 
 <script src="init.js" defer></script>
 
@@ -668,6 +667,29 @@
 			
 			<div>
 				<input id="popup_dlg_pending_action_ok" class="big-btn" type="button" value="OK" disabled onclick="close_dialog('popup_dlg_pending_action');"/>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div id="popup_dlg_progress" class="dlg" style="display:none">
+	<div class="dlg-background"></div>
+	<div class="dlg-container">
+		<div class="dlg-content">
+			<span class="team-title">Balancing</span>
+			
+			<br/>
+			<br/>
+			
+			<div id="dlg_progress">
+				<progress id="dlg_progress_bar" value="0" max="100" style="width: 80%;"></progress>
+				<br/>
+				<br/>
+				<div id="dlg_progress_text"></div>
+				<br/>
+				<br/>
+				<input id="dlg_progress_cancel" class="big-btn" type="button" value="Cancel" onclick="cancel_balance();"/>
+				<input id="dlg_progress_close" class="big-btn" type="button" value="OK" onclick="close_dialog('popup_dlg_progress');" style="display:none"/>
 			</div>
 		</div>
 	</div>

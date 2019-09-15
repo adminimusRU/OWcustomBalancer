@@ -126,6 +126,13 @@ function escapeHtml(html){
 	return p.innerHTML;
 }
 
+function factorial(num) {
+    var rval=1;
+    for (var i = 2; i <= num; i++)
+        rval = rval * i;
+    return rval;
+}
+
 function find_player_by_id(player_id) {
 	for( var i=0; i<lobby.length; i++) {
 		if ( player_id == lobby[i].id) {

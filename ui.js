@@ -141,81 +141,52 @@ function apply_settings() {
 }
 
 function balance_teams() {
-	// apply balancer settings
-	Balancer.slots_count = Settings.slots_count;	
-	Balancer.algorithm = Settings.balancer_alg;	
-	Balancer.separate_otps = Settings.separate_otps;	
-	Balancer.adjust_sr = Settings.adjust_sr;
-	Balancer.adjust_sr_by_class = {
-			tank: Settings.adjust_tank,
-			dps: Settings.adjust_dps,
-			support: Settings.adjust_support,
-		};
-	Balancer.onDebugMessage = on_balance_debug;
-		
-	Balancer.balance_priority_classic = Settings.balance_priority;	
-	Balancer.classic_sr_calc_method = Settings.sr_calc_method;
+	// send balancer settings to worker
+	balancer_settings = {
+		slots_count: 	Settings.slots_count,	
+		algorithm: 		Settings.balancer_alg,	
+		separate_otps: 	Settings.separate_otps,	
+		adjust_sr: 		Settings.adjust_sr,
+		adjust_sr_by_class: {
+				tank: Settings.adjust_tank,
+				dps: Settings.adjust_dps,
+				support: Settings.adjust_support,
+			},
+		balance_priority_classic: Settings.balance_priority,
+		classic_sr_calc_method: Settings.sr_calc_method,
+		balance_priority_rolelock: Settings.balance_priority_rolelock,
+	};
 	
-	Balancer.balance_priority_rolelock = Settings.balance_priority_rolelock;	
+	BalanceWorker.postMessage(["settings", balancer_settings]);
 	
 	// copy players (references) to balancer input
-	Balancer.players = team1.slice();
+	var players = team1.slice();
 	for( let class_name in team1_slots ) {
-		Balancer.players = Balancer.players.concat( team1_slots[class_name] );
+		players = players.concat( team1_slots[class_name] );
 	}
-	Balancer.players = Balancer.players.concat( team2 );
+	players = players.concat( team2 );
 	for( let class_name in team2_slots ) {
-		Balancer.players = Balancer.players.concat( team2_slots[class_name] );
+		players = players.concat( team2_slots[class_name] );
 	}
 	
-	// show spinner
-	open_dialog("popup_dlg_pending_action");
-	document.getElementById("dlg_pending_action_title").innerHTML = "Balance";
-	document.getElementById("dlg_pending_action_message").innerHTML = "Searching for best balance...";
-	document.getElementById("popup_dlg_pending_action_loader").style.display = "";
-	document.getElementById("popup_dlg_pending_action_ok").disabled = true;
+	// start balance calculation
+	BalanceWorker.postMessage(["balance", players]);	
 	
-	setTimeout( balance_teams_stage2, 100 );
+	// show progress bar
+	document.getElementById("dlg_progress_bar").value = 0;
+	document.getElementById("dlg_progress_text").innerHTML = "0 %";
+	document.getElementById("dlg_progress_cancel").style.display = "";
+	document.getElementById("dlg_progress_close").style.display = "none";
+	open_dialog( "popup_dlg_progress" );
 }
 
-function balance_teams_stage2() {
-	Balancer.balanceTeams();
-	
-	if ( Balancer.is_successfull ) {
-		document.getElementById("role_lock_enabled").checked = Balancer.is_rolelock;
-		localStorage.setItem(storage_prefix+"role_lock_enabled", Balancer.is_rolelock );
-		
-		// copy references to players from balancer to global teams
-		team1 = Balancer.team1.slice();
-		team2 = Balancer.team2.slice();
-		init_team_slots( team1_slots );
-		for( let class_name in Balancer.team1_slots ) {
-			team1_slots[class_name] = Balancer.team1_slots[class_name].slice();
-		}
-		init_team_slots( team2_slots );
-		for( let class_name in Balancer.team2_slots ) {
-			team2_slots[class_name] = Balancer.team2_slots[class_name].slice();
-		}
-		
-		redraw_teams();
-		
-		// hide dialog
-		close_dialog("popup_dlg_pending_action");
-	} else {
-		//alert("Balance not found");
-		
-		document.getElementById("popup_dlg_pending_action_loader").style.display = "none";
-		document.getElementById("dlg_pending_action_message").innerHTML = "Balance not found";
-		document.getElementById("popup_dlg_pending_action_ok").disabled = false;
-	}
-	
-	// clean up balancer
-	Balancer.players = [];
-	Balancer.team1 = [];
-	Balancer.team2 = [];
-	init_team_slots( Balancer.team1_slots );
-	init_team_slots( Balancer.team2_slots );
-}	
+function cancel_balance() {
+	BalanceWorker.terminate();
+	close_dialog( "popup_dlg_progress" );
+	BalanceWorker = new Worker('balance_worker.js');
+	BalanceWorker.onmessage = on_balance_worker_message;
+	BalanceWorker.postMessage(["init"]);
+}
 
 function clear_lobby() {
 	if( confirm("Permanently delete all players?") ) {
@@ -396,9 +367,13 @@ function enable_roll_debug() {
 	}	
 	
 	document.getElementById("debug_log").innerHTML = "roll debug enabled, level "+dbg_level+"<br/>";
-	Balancer.roll_debug = true;
-	Balancer.debug_level = dbg_level;
-	Balancer.onDebugMessage = on_balance_debug;
+	
+	balancer_settings = {
+		roll_debug: true,	
+		debug_level: dbg_level,
+	};
+	
+	BalanceWorker.postMessage(["settings", balancer_settings]);
 }
 
 function export_lobby_dlg_open() {
@@ -1026,21 +1001,13 @@ function manual_checkin_row_click(ev) {
 function manual_checkin_toggle_player( tr, cbox ) {
 	var player_id = cbox.getAttribute("player_id");
 	if ( cbox.checked ) {			
-		//if ( ! checkin_list.has(player_id) ) {
-			checkin_list.add(player_id);
-			save_checkin_list();
-			tr.classList.toggle("checked", true);
-		//}
+		checkin_list.add(player_id);
+		save_checkin_list();
+		tr.classList.toggle("checked", true);
 	} else {
 		checkin_list.delete(player_id);
 		save_checkin_list();
 		tr.classList.toggle("checked", false);
-		/*var index = checkin_list.indexOf(player_id);
-		if (index !== -1) {
-			checkin_list.splice( index, 1 );
-			save_checkin_list();
-			tr.classList.toggle("checked", false);
-		}*/
 	}
 	
 	document.getElementById("manual_checkin_table").tFoot.getElementsByTagName("td")[0].innerHTML = checkin_list.size;
@@ -1334,8 +1301,69 @@ function save_team_name( element ) {
 *		Other events
 */
 
-function on_balance_debug( dbg_msg ) {
-	document.getElementById("debug_log").innerHTML += dbg_msg+"</br>";
+function on_balance_worker_message(e) {
+	if ( ! Array.isArray(e.data) ) {
+		return;
+	}
+	if ( e.data.length == 0 ) {
+		return;
+	}
+	
+	var event_type = e.data[0];
+	if ( event_type == "progress" ) {
+		if (e.data.length < 2) {
+			return;
+		}
+		var progress_struct = e.data[1];
+		document.getElementById("dlg_progress_bar").value = progress_struct.current_progress;
+		document.getElementById("dlg_progress_text").innerHTML = progress_struct.current_progress.toString() + " %";
+	} else if ( event_type == "finish" ) {
+		if (e.data.length < 2) {
+			return;
+		}
+		var result_struct = e.data[1];
+		
+		if ( result_struct.is_successfull ) {
+			document.getElementById("role_lock_enabled").checked = result_struct.is_rolelock;
+			localStorage.setItem(storage_prefix+"role_lock_enabled", result_struct.is_rolelock );
+			
+			// copy references to players from balancer to global teams
+			team1 = result_struct.team1.slice();
+			team2 = result_struct.team2.slice();
+			init_team_slots( team1_slots );
+			for( let class_name in result_struct.team1_slots ) {
+				team1_slots[class_name] = result_struct.team1_slots[class_name].slice();
+			}
+			init_team_slots( team2_slots );
+			for( let class_name in result_struct.team2_slots ) {
+				team2_slots[class_name] = result_struct.team2_slots[class_name].slice();
+			}
+			
+			sort_players( team1, 'sr' );
+			sort_players( team2, 'sr' );
+			
+			redraw_teams();
+			
+			// hide dialog
+			close_dialog("popup_dlg_progress");
+		} else {
+			document.getElementById("dlg_progress_text").innerHTML = "Balance not found";
+			document.getElementById("dlg_progress_cancel").style.display = "none";
+			document.getElementById("dlg_progress_close").style.display = "";
+		}
+	} else if ( event_type == "error" ) {
+		if (e.data.length < 2) {
+			return;
+		}
+		alert("Balancer error: "+e.data[1]);
+	} else if ( event_type == "dbg" ) {
+		if (e.data.length < 2) {
+			return;
+		}
+		
+		var dbg_msg = e.data[1];
+		document.getElementById("debug_log").innerHTML += dbg_msg+"</br>";
+	}
 }
 
 function on_player_stats_updated( player_id ) {

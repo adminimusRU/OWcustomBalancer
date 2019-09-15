@@ -128,3 +128,8 @@ lobby_container.style.paddingRight = ""+get_scrollbar_width()+"px";
 
 // load class and rank icons and convert them to data:uri strings, for team export
 prepare_datauri_icons();
+
+// init balancer worker
+BalanceWorker = new Worker('balance_worker.js');
+BalanceWorker.onmessage = on_balance_worker_message;
+BalanceWorker.postMessage(["init"]);

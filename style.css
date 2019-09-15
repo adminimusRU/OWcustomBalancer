@@ -718,3 +718,12 @@ th.sort-down:after {
 }
 
 .dropdown:hover .dropdown-content {display: block;}
+
+
+/*
+	progress bar dialog
+*/
+
+div[id="dlg_progress"] {
+	width: 25em;
+}
