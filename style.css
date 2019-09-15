@@ -241,8 +241,7 @@ div.team-cell:hover > div.team-toolbar {
 	border-radius: 1em;
 	padding: 1em;
 	padding-top: 0.2em;
-	max-width: 25em;
-	min-width: 20em;
+	min-width: 15em;
 	color: #333333;
 }
 
