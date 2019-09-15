@@ -2018,7 +2018,20 @@ function redraw_player( player_struct ) {
 	
 	var player_cell_old = document.getElementById( player_struct.id );
 	var player_item_row = player_cell_old.parentElement;
-	var player_cell_new = draw_player_cell( player_struct, is_small, false );
+	
+	var slot_class = undefined;
+	if (is_small && is_role_lock_enabled()) {
+		// find player slot
+		for (var team_slots of [team1_slots, team2_slots]) {
+			var tmp = get_player_role( team_slots, player_struct );
+			if (tmp !== undefined ) {
+				slot_class = tmp;
+				break;
+			}
+		}
+	}
+	
+	var player_cell_new = draw_player_cell( player_struct, is_small, false, slot_class );
 	player_item_row.replaceChild( player_cell_new, player_cell_old );
 	
 	update_teams_sr();

@@ -273,6 +273,7 @@ function get_player_role( team_slots, player ) {
 			}
 		}
 	}
+	return undefined;
 }
 
 // Calculate player SR as single number
@@ -285,7 +286,11 @@ function get_player_role( team_slots, player ) {
 function get_player_sr( player_struct, method="main" ) {
 	if ( class_names.indexOf(method) != -1 ) {
 		if ( player_struct.sr_by_class[method] !== undefined ) {
-			return player_struct.sr_by_class[method];
+			if ( player_struct.classes.indexOf(method) != -1 ) {
+				return player_struct.sr_by_class[method];
+			} else {
+				return 0;
+			}
 		} else {
 			return 0;
 		}
