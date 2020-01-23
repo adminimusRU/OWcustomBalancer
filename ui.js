@@ -80,8 +80,8 @@ function apply_settings() {
 		new_slot_count = Number(setting_input.value);
 		new_team_size += new_slot_count;
 		
-		if ( new_slot_count < new_slot_count ) {
-			// team size old_slot_count - move excess players back to lobby
+		if ( new_slot_count < old_slot_count ) {
+			// move excess players back to lobby
 			teams_changed = true;
 			while ( team1_slots[class_name].length > new_slot_count ) {
 				let removed_player = team1_slots[class_name].pop();
