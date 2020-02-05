@@ -437,7 +437,9 @@ var Balancer = {
 	findNextPlayerMaskIncrement: function() {
 		while(true) {
 			// binary increment mask
-			this.incrementMask( this.player_selection_mask, 2 );			
+			if ( ! this.incrementMask( this.player_selection_mask, 2 ) ) {
+				return false;
+			}
 			
 			// check if mask has needed amount of bits
 			var bits_count = 0;
