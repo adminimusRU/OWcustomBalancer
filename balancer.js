@@ -690,7 +690,7 @@ var Balancer = {
 	// objective function is a measure of balance for combination 
 	// smaller value indicates better balanced combination, 0 = perfect balance
 	calcObjectiveFunctionRoleLock: function( print_debug=false ) {
-		// for classic balancer OF is a combined value of 3 factors:
+		// for role lock balancer OF is a combined value of 3 factors:
 		// 1) difference in teams' average SR
 		// 2) amount of players sitting on role which is not their main class (i.e. playing on offclass)
 		// 3) presence of similar 'one trick ponies' in the same team (if enabled)

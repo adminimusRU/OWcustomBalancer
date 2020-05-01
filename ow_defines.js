@@ -14,15 +14,14 @@ var hero_classes = {
 	mccree:		"dps",
 	doomfist:	"dps",
 	ashe:		"dps",
-	
 	torbjorn:	"dps",
 	hanzo:		"dps",
 	mei:		"dps",
 	bastion:	"dps",
 	widowmaker:	"dps",
 	junkrat:	"dps",
-	
 	symmetra:	"dps",
+	echo:		"dps",
 	
 	mercy:		"support",
 	ana:		"support",
